@@ -16,3 +16,6 @@
 
 # ViM swapfiles
 **/.*.swp
+
+# JetBrains Goland files
+.idea

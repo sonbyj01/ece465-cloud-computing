@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"time"
+	"proj1/graph"
 )
 
 func f(from string) {
@@ -12,18 +13,18 @@ func f(from string) {
 }
 
 // speculatively color vertices
-func coloring(Graph *g) {
-	var nextMinValue = 0
-
-	for _, node := range g.nodes {
-		fmt.Println("DEBUGGING", index, "=>", element)
-
-		for _, neighborNode := range element.nodes {
-			if node.value == neighborNode.value {
-				node.value++
-			}
-		}
-	}
+func coloring(g *graph.Graph) {
+	//nextMinValue := 0
+	//
+	//for _, node := range g.nodes {
+	//	fmt.Println("DEBUGGING", index, "=>", element)
+	//
+	//	for _, neighborNode := range element.nodes {
+	//		if node.value == neighborNode.value {
+	//			node.value++
+	//		}
+	//	}
+	//}
 }
 
 func main() {
