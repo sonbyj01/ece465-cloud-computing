@@ -24,10 +24,10 @@ Gebremedhin-Manne algorithm, which is described in [this presentation][1];
 this takes a greedy approach by speculatively choosing the lowest
 whole number (color) not taken by any of its neighbors, for multiple
 nodes in parallel. Since this step is done without any data synchronization,
-it is fast but may result in some inconsistencies (conflicts); thus
-after performing this step on every node, we perform the same procedure
-again only on the nodes which had conflicts, repeating until no conflicts
-are found.
+it is fast but may result in some inconsistencies (conflicts). Thus
+after performing this step on every node, a synchronization step is performed
+to detect which nodes had conflicts, and then we repeat the same procedure
+again only on the nodes which had conflicts until no conflicts arise.
 
 ### Resources
 
