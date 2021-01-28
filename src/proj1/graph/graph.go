@@ -4,6 +4,7 @@ package graph
 // of pointers to other nodes
 type Node struct {
 	Value int
+	Index int
 	Adj   []*Node
 }
 
@@ -16,12 +17,22 @@ type Graph struct {
 // Since this is namespaced under the graph package, can be used from the
 // outside as graph.New(...)
 func New(nodeCount int) Graph {
-	return Graph{make([]Node, nodeCount)}
+	g := Graph{make([]Node, nodeCount)}
+
+	for i := 0; i < nodeCount; i++ {
+		g.Nodes[i].Index = i
+	}
+
+	return g
 }
 
 // AddNode adds a node to a graph
 func (g *Graph) AddNode(value int) {
-	g.Nodes = append(g.Nodes, Node{value, make([]*Node, 0)})
+	g.Nodes = append(g.Nodes, Node{
+		value,
+		len(g.Nodes),
+		make([]*Node, 0),
+	})
 }
 
 // AddUndirectedEdge adds an undirected edge between two nodes in a graph
