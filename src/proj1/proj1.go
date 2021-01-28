@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"proj1/graph"
+	"runtime"
 )
 
 func f(from string) {
@@ -12,30 +12,85 @@ func f(from string) {
 	}
 }
 
-// speculatively color vertices
-func coloring(g *graph.Graph) {
-	//nextMinValue := 0
-	//
-	//for _, node := range g.nodes {
-	//	fmt.Println("DEBUGGING", index, "=>", element)
-	//
-	//	for _, neighborNode := range element.nodes {
-	//		if node.value == neighborNode.value {
-	//			node.value++
-	//		}
-	//	}
-	//}
+func printNodes(g graph.Graph) {
+	fmt.Println("===============")
+	for index, node := range g.Nodes {
+		fmt.Println("-- DEBUGGING-- ", "Index: ", index,
+			"Node Value: ", node.Value, "Edge Array: ", node.Edges)
+	}
+	fmt.Println("===============")
+}
+
+// speculative coloring
+func coloring(g graph.Graph) {
+	for index, node := range g.Nodes {
+		for index2, _ := range node.Edges {
+			if g.Nodes[index].Value == g.Nodes[index2].Value {
+				g.Nodes[index].Value++
+			}
+		}
+	}
+}
+
+// conflict detection and resolution
+func conflictResolution(g graph.Graph) {
+	for index, node := range g.Nodes {
+		for index2, _ := range node.Edges {
+			if g.Nodes[index].Value == g.Nodes[index2].Value {
+				if index > index2 {
+					g.Nodes[index].Value++
+				} else {
+					g.Nodes[index2].Value++
+				}
+			}
+		}
+	}
+}
+
+// showNo - Shows no from 0 to 99
+func showNo() {
+	for i := 0; i < 100; i++ {
+		fmt.Println("value of i=", i)
+	}
+} // showAlphabets - shows alphabets from a-z
+func showAlphabets() {
+	for j := 'a'; j <= 'z'; j++ {
+		fmt.Println("value of j=", string(j))
+	}
+}
+
+// Verify number of logical cores available
+func MaxParallelism() int {
+	maxProcs := runtime.GOMAXPROCS(0)
+	numCPU := runtime.NumCPU()
+	if maxProcs < numCPU {
+		return maxProcs
+	}
+	return numCPU
+}
+
+func execute(id int) {
+	fmt.Printf("id: %d\n", id)
 }
 
 func main() {
-	f("direct")
+	//generatedGraph := graph.CompleteGraph(10)
+	//printNodes(generatedGraph)
+	//go coloring(generatedGraph)
+	//go conflictResolution(generatedGraph)
+	//printNodes(generatedGraph)
 
-	go f("goroutine")
+	//for i := 0; i < 5; i++ {
+	//	go showNo()
+	//	go showAlphabets()
+	//}
 
-	go func(msg string) {
-		fmt.Println(msg)
-	}("going")
+	fmt.Println(runtime.NumCPU())
 
-	time.Sleep(time.Second)
-	fmt.Println("done")
+	//fmt.Println("Started")
+	//for i := 0; i < 10; i++ {
+	//	go execute(i)
+	//}
+	//time.Sleep(time.Second * 2)
+	//fmt.Println("Finished")
 }
