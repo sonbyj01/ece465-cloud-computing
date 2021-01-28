@@ -1,5 +1,7 @@
 package graph
 
+import "fmt"
+
 // Node represents a node of a Graph object, with an adjacency list
 // of pointers to other nodes
 type Node struct {
@@ -52,4 +54,15 @@ func (g *Graph) AddUndirectedEdge(n1, n2 int) {
 func (n1 *Node) AddUndirectedEdge(n2 *Node) {
 	n2.Adj = append(n2.Adj, n1)
 	n1.Adj = append(n1.Adj, n2)
+}
+
+// Print prints out a list of a graph's nodes and values, as well as their
+// neighbors and values
+func (g *Graph) Print() {
+	for i, node := range g.Nodes {
+		fmt.Printf("%d: %d\n", i, node.Value)
+		for _, neighbor := range node.Adj {
+			fmt.Printf("\t%d: %d\n", neighbor.Index, neighbor.Value)
+		}
+	}
 }

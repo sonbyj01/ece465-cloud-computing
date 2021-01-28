@@ -23,7 +23,7 @@ func TestBranchingFactor(t *testing.T) {
 	const maxGraphSize, maxBfRatio, threshold = 1000, 0.75, 0.20
 
 	// try some random large graph sizes and branching factors
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 20; i++ {
 		N := maxGraphSize / 2 + rand.Int() % (maxGraphSize / 2)
 		desiredBf := rand.Float64() * float64(N) * maxBfRatio
 		actualBf := float64(countEdges(
@@ -67,5 +67,45 @@ func TestIndices(t *testing.T) {
 
 	if g := graph.NewRandomGraph(N, bf); !checkIndices(&g, N) {
 		t.Errorf("NewRandomGraph creates wrong indices")
+	}
+}
+
+// check that a graph is appropriately colored
+func checkColoring(g *graph.Graph) bool {
+	for _, node := range g.Nodes {
+		for _, neighbor := range node.Adj {
+			if node.Value == neighbor.Value {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// TestSequential checks that the sequential coloring works
+func TestSequential(t *testing.T) {
+	N := 1000
+	bf := float32(30)
+	maxColor := 1000
+
+	t.Logf("Test: NewCompleteGraph(%d)", N)
+	g := graph.NewCompleteGraph(N)
+	colorSequential(&g, maxColor)
+	if !checkColoring(&g) {
+		t.Errorf("NewCompleteGraph is improperly colored")
+	}
+
+	t.Logf("Test: NewCompleteGraph(%d)", N)
+	g = graph.NewRingGraph(N)
+	colorSequential(&g, maxColor)
+	if !checkColoring(&g) {
+		t.Errorf("NewRingGraph is improperly colored")
+	}
+
+	t.Logf("Test: NewRandomGraph(%d, %f)", N, bf)
+	g = graph.NewRandomGraph(N, bf)
+	colorSequential(&g, maxColor)
+	if !checkColoring(&g) {
+		t.Errorf("NewRandomGraph is improperly colored")
 	}
 }

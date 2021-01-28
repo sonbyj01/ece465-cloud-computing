@@ -1,41 +1,47 @@
 package main
 
 import (
-	"fmt"
 	"proj1/graph"
-	"time"
 )
 
-func f(from string) {
-	for i := 0; i < 3; i++ {
-		fmt.Println(from, ":", i)
+func colorSequential(g *graph.Graph, maxColor int) {
+	neighborColors := make([]bool, maxColor)
+
+	for _, node := range g.Nodes {
+		for i := 0; i < maxColor; i++ {
+			neighborColors[i] = false
+		}
+
+		for _, neighbor := range node.Adj {
+			neighborColors[neighbor.Value] = true
+		}
+
+		colorFound := false
+		for i := 0; i < maxColor; i++ {
+			if !neighborColors[i] {
+				g.Nodes[node.Index].Value = i
+				colorFound = true
+				break
+			}
+		}
+
+		if !colorFound {
+			panic("maxColor exceeded")
+		}
 	}
 }
 
-// speculatively color vertices
-func coloring(g *graph.Graph) {
-	//nextMinValue := 0
-	//
-	//for _, node := range g.nodes {
-	//	fmt.Println("DEBUGGING", index, "=>", element)
-	//
-	//	for _, neighborNode := range element.nodes {
-	//		if node.value == neighborNode.value {
-	//			node.value++
-	//		}
-	//	}
-	//}
-}
-
 func main() {
-	f("direct")
+	N := 100
+	completeGraph := graph.NewCompleteGraph(N)
 
-	go f("goroutine")
+	// maxColor for a very simple coloring algorithm
+	maxColor := 100
 
-	go func(msg string) {
-		fmt.Println(msg)
-	}("going")
-
-	time.Sleep(time.Second)
-	fmt.Println("done")
+	completeGraph.Print()
+	//for u := completeGraph; len(u.Nodes) > 0; {
+	//	colorSequential(&u, maxColor)
+	//}
+	colorSequential(&completeGraph, maxColor)
+	completeGraph.Print()
 }
