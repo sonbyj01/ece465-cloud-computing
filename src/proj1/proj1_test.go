@@ -24,7 +24,7 @@ func TestBranchingFactor(t *testing.T) {
 
 	// try some random large graph sizes and branching factors
 	for i := 0; i < 20; i++ {
-		N := maxGraphSize / 2 + rand.Int() % (maxGraphSize / 2)
+		N := maxGraphSize/2 + rand.Int()%(maxGraphSize/2)
 		desiredBf := rand.Float64() * float64(N) * maxBfRatio
 		actualBf := float64(countEdges(
 			graph.NewRandomGraph(N, float32(desiredBf)))) / float64(N)

@@ -74,7 +74,7 @@ func colorParallel(g *graph.Graph, maxColor int) {
 	// set u to be a list of all of the nodes in the graph; it has
 	// to be a list of node pointers so we actually update the graph
 	u := make([]*graph.Node, len(g.Nodes))
-	for i, _ := range g.Nodes {
+	for i := range g.Nodes {
 		u[i] = &g.Nodes[i]
 	}
 
