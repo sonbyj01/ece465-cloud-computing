@@ -55,35 +55,66 @@ func colorNodeParallel(n *graph.Node, wg *sync.WaitGroup, maxColor int) {
 	panic("maxColor exceeded")
 }
 
+func checkNodeConflictsParallel(n *graph.Node, wg *sync.WaitGroup,
+	ch chan *graph.Node) {
+	defer wg.Done()
+
+	for _, neighbor := range n.Adj {
+		if neighbor.Value == n.Value && neighbor.Index > n.Index {
+			ch <- n
+		}
+	}
+}
+
 // colorParallel is the driver for the parallel coloring scheme
 func colorParallel(g *graph.Graph, maxColor int) {
 	var wg sync.WaitGroup
 
+	// set u to be a list of all of the nodes in the graph; it has
+	// to be a list of node pointers so we actually update the graph
+	u := make([]*graph.Node, len(g.Nodes))
+	for i, _ := range g.Nodes {
+		u[i] = &g.Nodes[i]
+	}
+
 	// repeat process until run out of nodes to recolor
-	for u := g.Nodes; len(u) > 0; {
+	for len(u) > 0 {
 		// speculative coloring
 		wg.Add(len(u))
 		for i := range u {
-			go colorNodeParallel(&u[i], &wg, maxColor)
+			go colorNodeParallel(u[i], &wg, maxColor)
 		}
 		wg.Wait()
 
 		// conflict resolution: generate a list of nodes to recolor
-		// TODO: working here
-		break
+		wg.Add(len(u))
+		ch := make(chan *graph.Node, len(u))
+		for i := range u {
+			go checkNodeConflictsParallel(u[i], &wg, ch)
+		}
+
+		// monitor to watch for the parallel routines to finish and close the
+		// channel so the range loop below this knows when to finish
+		go func() {
+			wg.Wait()
+			close(ch)
+		}()
+
+		u = make([]*graph.Node, 0)
+		for node := range ch {
+			u = append(u, node)
+		}
 	}
 }
 
 func main() {
-	N := 100
+	N := 1000
 	completeGraph := graph.NewCompleteGraph(N)
 
 	// maxColor for a very simple coloring algorithm
-	maxColor := 100
+	maxColor := 3 * N / 2
 
-	completeGraph.Print()
 	colorParallel(&completeGraph, maxColor)
-	completeGraph.Print()
 
 	fmt.Printf("isColored: %t", completeGraph.CheckValidColoring())
 }
