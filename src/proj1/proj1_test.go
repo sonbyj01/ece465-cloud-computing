@@ -97,3 +97,11 @@ func TestSequential(t *testing.T) {
 		t.Errorf("NewRandomGraph is improperly colored")
 	}
 }
+
+// BenchmarkSequential times the output of the sequential coloring on a
+// large random graph
+func BenchmarkSequential(b *testing.B) {
+	// TODO: create graph
+	b.ResetTimer()
+	// TODO: run test
+}
