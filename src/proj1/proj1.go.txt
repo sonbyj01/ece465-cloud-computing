@@ -1,0 +1,97 @@
+package main
+
+import (
+	"fmt"
+	"proj1/graph"
+	//"sync"
+)
+
+func printNodes1(g graph.Graph) {
+	fmt.Println("===============")
+	for _, node := range g.Nodes {
+		fmt.Println("-- DEBUGGING-- ", "Index: ", node.Index,
+			"Node Value: ", node.Value, "Edge Array: ", node.Adj)
+	}
+	fmt.Println("===============")
+}
+
+//// speculative coloring
+//func coloring(g graph.Graph) {
+//	var wg sync.WaitGroup
+//
+//	for _, node := range g.Nodes {
+//		wg.Add(1)
+//
+//		go func() {
+//			defer wg.Done()
+//			var colors = make([]bool, 20)
+//
+//			for _, neighborNode := range node.Adj {
+//				colors[neighborNode.Value] = true
+//			}
+//
+//			for minColorValue, boolValue := range colors {
+//				if !boolValue {
+//					node.Value = minColorValue
+//					break
+//				}
+//			}
+//		}()
+//	}
+//	wg.Wait()
+//}
+//
+//// conflict detection and resolution
+//func conflictResolution(g graph.Graph) graph.Graph {
+//	var wg sync.WaitGroup
+//	var temp graph.Graph
+//
+//	for index, node := range g.Nodes {
+//		wg.Add(1)
+//
+//		go func() {
+//			defer wg.Done()
+//
+//			for _, neighborNode := range node.Adj {
+//				if g.Nodes[index].Value == neighborNode.Value {
+//					if neighborNode.Index < index {
+//						temp.Nodes = append(temp.Nodes, *neighborNode)
+//					}
+//				}
+//			}
+//		}()
+//	}
+//	wg.Wait()
+//	return temp
+//}
+
+func main() {
+	generatedGraph := graph.NewCompleteGraph(10)
+	printNodes1(generatedGraph)
+	//count := 1
+
+	//printNodes(generatedGraph)
+
+
+
+	//for len(generatedGraph.Nodes) > 0 {
+	//	coloring(generatedGraph)
+	//	conflictResolution(generatedGraph)
+	//
+	//	//count++
+	//	//
+	//	//if count % 25 == 0 {
+	//	//	fmt.Println(count)
+	//	//}
+	//}
+
+	//printNodes(generatedGraph)
+
+	//printNodes(generatedGraph)
+	//coloring(generatedGraph)
+	//printNodes(generatedGraph)
+	//conflictResolution(generatedGraph)
+	//printNodes(generatedGraph)
+
+	//fmt.Println(runtime.NumCPU())
+}
