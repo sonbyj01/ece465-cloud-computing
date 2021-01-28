@@ -70,18 +70,6 @@ func TestIndices(t *testing.T) {
 	}
 }
 
-// check that a graph is appropriately colored
-func checkColoring(g *graph.Graph) bool {
-	for _, node := range g.Nodes {
-		for _, neighbor := range node.Adj {
-			if node.Value == neighbor.Value {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 // TestSequential checks that the sequential coloring works
 func TestSequential(t *testing.T) {
 	N := 1000
@@ -91,21 +79,21 @@ func TestSequential(t *testing.T) {
 	t.Logf("Test: NewCompleteGraph(%d)", N)
 	g := graph.NewCompleteGraph(N)
 	colorSequential(&g, maxColor)
-	if !checkColoring(&g) {
+	if !g.CheckValidColoring() {
 		t.Errorf("NewCompleteGraph is improperly colored")
 	}
 
 	t.Logf("Test: NewCompleteGraph(%d)", N)
 	g = graph.NewRingGraph(N)
 	colorSequential(&g, maxColor)
-	if !checkColoring(&g) {
+	if !g.CheckValidColoring() {
 		t.Errorf("NewRingGraph is improperly colored")
 	}
 
 	t.Logf("Test: NewRandomGraph(%d, %f)", N, bf)
 	g = graph.NewRandomGraph(N, bf)
 	colorSequential(&g, maxColor)
-	if !checkColoring(&g) {
+	if !g.CheckValidColoring() {
 		t.Errorf("NewRandomGraph is improperly colored")
 	}
 }

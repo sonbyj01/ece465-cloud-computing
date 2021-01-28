@@ -66,3 +66,15 @@ func (g *Graph) Print() {
 		}
 	}
 }
+
+// CheckValidColoring checks whether a graph is appropriately colored
+func (g *Graph) CheckValidColoring() bool {
+	for _, node := range g.Nodes {
+		for _, neighbor := range node.Adj {
+			if node.Value == neighbor.Value {
+				return false
+			}
+		}
+	}
+	return true
+}
