@@ -37,3 +37,35 @@ func TestBranchingFactor(t *testing.T) {
 		}
 	}
 }
+
+func checkIndices(g *graph.Graph, n int) bool {
+	if n != len(g.Nodes) {
+		return false
+	}
+
+	for i, node := range g.Nodes {
+		if i != node.Index {
+			return false
+		}
+	}
+
+	return true
+}
+
+// TestIndices verifies that the indices are correct
+func TestIndices(t *testing.T) {
+	N := 1000
+	bf := float32(30)
+
+	if g := graph.NewCompleteGraph(N); !checkIndices(&g, N) {
+		t.Errorf("NewCompleteGraph creates wrong indices")
+	}
+
+	if g := graph.NewRingGraph(N); !checkIndices(&g, N) {
+		t.Errorf("NewRingGraph creates wrong indices")
+	}
+
+	if g := graph.NewRandomGraph(N, bf); !checkIndices(&g, N) {
+		t.Errorf("NewRandomGraph creates wrong indices")
+	}
+}
