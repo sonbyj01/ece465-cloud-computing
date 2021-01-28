@@ -71,8 +71,6 @@ func checkNodeConflictsParallel(n *graph.Node, wg *sync.WaitGroup,
 func colorParallel(g *graph.Graph, maxColor int) {
 	var wg sync.WaitGroup
 
-	fmt.Printf("Beginning parallel coloring\n")
-
 	// set u to be a list of all of the nodes in the graph; it has
 	// to be a list of node pointers so we actually update the graph
 	u := make([]*graph.Node, len(g.Nodes))
@@ -82,8 +80,6 @@ func colorParallel(g *graph.Graph, maxColor int) {
 
 	// repeat process until run out of nodes to recolor
 	for len(u) > 0 {
-		fmt.Printf("New speculative coloring round, |u|=%d\n", len(u))
-
 		// speculative coloring
 		wg.Add(len(u))
 		for i := range u {

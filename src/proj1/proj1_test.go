@@ -98,10 +98,62 @@ func TestSequential(t *testing.T) {
 	}
 }
 
+// TestParallel checks that the parallel coloring works
+func TestParallel(t *testing.T) {
+	N := 1000
+	bf := float32(30)
+	maxColor := 1000
+
+	t.Logf("Test: NewCompleteGraph(%d)", N)
+	g := graph.NewCompleteGraph(N)
+	colorParallel(&g, maxColor)
+	if !g.CheckValidColoring() {
+		t.Errorf("NewCompleteGraph is improperly colored")
+	}
+
+	t.Logf("Test: NewCompleteGraph(%d)", N)
+	g = graph.NewRingGraph(N)
+	colorParallel(&g, maxColor)
+	if !g.CheckValidColoring() {
+		t.Errorf("NewRingGraph is improperly colored")
+	}
+
+	t.Logf("Test: NewRandomGraph(%d, %f)", N, bf)
+	g = graph.NewRandomGraph(N, bf)
+	colorParallel(&g, maxColor)
+	if !g.CheckValidColoring() {
+		t.Errorf("NewRandomGraph is improperly colored")
+	}
+}
+
 // BenchmarkSequential times the output of the sequential coloring on a
 // large random graph
 func BenchmarkSequential(b *testing.B) {
-	// TODO: create graph
-	b.ResetTimer()
-	// TODO: run test
+	N := 15000
+	bf := float32(100)
+	maxColor := 3 * N / 2
+
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		g := graph.NewRandomGraph(N, bf)
+		b.StartTimer()
+
+		colorSequential(&g, maxColor)
+	}
+}
+
+// BenchmarkParallel times the output of the sequential coloring on a
+// large random graph
+func BenchmarkParallel(b *testing.B) {
+	N := 15000
+	bf := float32(100)
+	maxColor := 3 * N / 2
+
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		g := graph.NewRandomGraph(N, bf)
+		b.StartTimer()
+
+		colorParallel(&g, maxColor)
+	}
 }
