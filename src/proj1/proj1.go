@@ -62,6 +62,7 @@ func checkNodeConflictsParallel(n *graph.Node, wg *sync.WaitGroup,
 	for _, neighbor := range n.Adj {
 		if neighbor.Value == n.Value && neighbor.Index > n.Index {
 			ch <- n
+			return
 		}
 	}
 }
@@ -69,6 +70,8 @@ func checkNodeConflictsParallel(n *graph.Node, wg *sync.WaitGroup,
 // colorParallel is the driver for the parallel coloring scheme
 func colorParallel(g *graph.Graph, maxColor int) {
 	var wg sync.WaitGroup
+
+	fmt.Printf("Beginning parallel coloring\n")
 
 	// set u to be a list of all of the nodes in the graph; it has
 	// to be a list of node pointers so we actually update the graph
@@ -79,6 +82,8 @@ func colorParallel(g *graph.Graph, maxColor int) {
 
 	// repeat process until run out of nodes to recolor
 	for len(u) > 0 {
+		fmt.Printf("New speculative coloring round, |u|=%d\n", len(u))
+
 		// speculative coloring
 		wg.Add(len(u))
 		for i := range u {
@@ -87,14 +92,18 @@ func colorParallel(g *graph.Graph, maxColor int) {
 		wg.Wait()
 
 		// conflict resolution: generate a list of nodes to recolor
+		// provide the channel with a reasonably-sized buffer (?), since we
+		// don't need the values immediately
 		wg.Add(len(u))
-		ch := make(chan *graph.Node, len(u))
+		ch := make(chan *graph.Node, 64)
 		for i := range u {
 			go checkNodeConflictsParallel(u[i], &wg, ch)
 		}
 
 		// monitor to watch for the parallel routines to finish and close the
-		// channel so the range loop below this knows when to finish
+		// channel so the range loop below this knows when to finish; this
+		// doesn't really have to happen in parallel if we make the channel
+		// large enough, but this allows us to keep the channel buffer small
 		go func() {
 			wg.Wait()
 			close(ch)
@@ -108,13 +117,19 @@ func colorParallel(g *graph.Graph, maxColor int) {
 }
 
 func main() {
-	N := 1000
+	N := 12000
+
+	fmt.Printf("Generating complete graph...\n")
 	completeGraph := graph.NewCompleteGraph(N)
 
 	// maxColor for a very simple coloring algorithm
 	maxColor := 3 * N / 2
 
-	colorParallel(&completeGraph, maxColor)
+	// perform coloring
+	fmt.Printf("Graph coloring...\n")
+	//colorParallel(&completeGraph, maxColor)
+	colorSequential(&completeGraph, maxColor)
 
+	// check that the graph coloring worked
 	fmt.Printf("isColored: %t", completeGraph.CheckValidColoring())
 }
