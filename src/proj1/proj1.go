@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"proj1/graph"
 	"sync"
+	"sync/atomic"
+	"unsafe"
 )
 
 //func printGraph(g graph.Graph) {
@@ -17,16 +19,16 @@ import (
 //	fmt.Println("===============")
 //}
 //
-//func printNodes(n []graph.Node) {
-//	fmt.Println("===============")
-//
-//	for index, node := range n {
-//		fmt.Println("-- DEBUGGING-- ", "Index: ", index,
-//			"Node Value: ", node.Value, "Edge Array: ", node.Adj)
-//	}
-//
-//	fmt.Println("===============")
-//}
+func printNodes(n []graph.Node) {
+	fmt.Println("===============")
+
+	for index, node := range n {
+		fmt.Println("-- DEBUGGING-- ", "Index: ", index,
+			"Node Value: ", node.Value, "Edge Array: ", node.Adj)
+	}
+
+	fmt.Println("===============")
+}
 
 //func speculativeColoring(u *graph.Graph) {
 //	var wg sync.WaitGroup
@@ -87,26 +89,24 @@ func assignColors(G graph.Graph, C []int, Conf []graph.Node) []int {
 
 	for index, v := range Conf {
 		wg.Add(1)
-		fmt.Println(index, v)
 
-		go func() {
+		go func(indexP int, vP graph.Node) {
 			defer wg.Done()
 			Forbidden := make([]bool, len(Conf))
-			fmt.Println("before: ", v.Index, Forbidden)
-			for _, u := range Conf[index].Adj {
+
+			for _, u := range Conf[indexP].Adj {
 				Forbidden[u.Value] = true
 			}
-			fmt.Println("after: ", v.Index, Forbidden)
 
 			for minColorVal, boolVal := range Forbidden {
 				if !boolVal {
-					C[v.Index] = minColorVal
-					G.Nodes[v.Index].Value = minColorVal
-					Conf[v.Index].Value = minColorVal
+					C[vP.Index] = minColorVal
+					G.Nodes[vP.Index].Value = minColorVal
+					Conf[vP.Index].Value = minColorVal
 					break
 				}
 			}
-		}()
+		}(index, v)
 	}
 	wg.Wait()
 	return C
@@ -114,19 +114,29 @@ func assignColors(G graph.Graph, C []int, Conf []graph.Node) []int {
 
 func detectConflicts(G graph.Graph, C []int, Conf []graph.Node) []graph.Node {
 	var NewConf []graph.Node
-	ch := make(chan []graph.Node)
+	var wg sync.WaitGroup
+	//ch := make(chan []graph.Node)
+	var unsafeNewConf = (*unsafe.Pointer)(unsafe.Pointer(&NewConf))
 
 	for _, v := range Conf {
-		go func() {
-			for _, u := range v.Adj {
-				if C[v.Index] == C[u.Index] && u.Index < v.Index {
-					ch <- append(NewConf, v)
+		wg.Add(1)
+
+		go func(vP graph.Node) {
+			defer wg.Done()
+
+			for _, u := range vP.Adj {
+				if C[vP.Index] == C[u.Index] && u.Index < vP.Index {
+					something := atomic.LoadPointer(unsafeNewConf)
+					fmt.Println("something:", something)
+					//atomic.StorePointer(unsafeNewConf, unsafe.Pointer(append(unsafeNewConf, )))
+					//ch <- append(NewConf, vP)
 				}
 			}
-		}()
+		}(v)
 	}
-	NewConfP := <-ch
-	return NewConfP
+	wg.Wait()
+	//NewConfP := <-ch
+	return NewConf
 }
 
 // C is a color array associated with the respective node index
@@ -137,13 +147,14 @@ func main() {
 	Conf := G.Nodes
 
 	for len(Conf) != 0 {
-		//fmt.Println(C)
-		//printNodes(Conf)
+		fmt.Println(C)
+		printNodes(Conf)
 		C = assignColors(G, C, Conf)
-		//fmt.Println(C)
-		//printNodes(Conf)
-		break
-		//Conf = detectConflicts(G, C, Conf)
+		fmt.Println(C)
+		printNodes(Conf)
+		Conf = detectConflicts(G, C, Conf)
+		fmt.Println(C)
+		printNodes(Conf)
 		//time.Sleep(10 * time.Millisecond)
 	}
 }
