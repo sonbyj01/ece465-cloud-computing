@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"proj1/graph"
+	"time"
 )
 
 func f(from string) {
