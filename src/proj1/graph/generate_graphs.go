@@ -4,7 +4,7 @@ import (
 	"math/rand"
 )
 
-// CompleteGraph generates a complete graph with nodeCount nodes
+// NewCompleteGraph generates a complete graph with nodeCount nodes
 func NewCompleteGraph(nodeCount int) Graph {
 	g := New(nodeCount)
 
@@ -17,7 +17,7 @@ func NewCompleteGraph(nodeCount int) Graph {
 	return g
 }
 
-// RingGraph generates a graph in which each node has exactly two neighbors
+// NewRingGraph generates a graph in which each node has exactly two neighbors
 func NewRingGraph(nodeCount int) Graph {
 	g := New(nodeCount)
 
@@ -33,7 +33,7 @@ func NewRingGraph(nodeCount int) Graph {
 	return g
 }
 
-// RandomGraph generates a graph with nodeCount nodes and average
+// NewRandomGraph generates a graph with nodeCount nodes and average
 // branching factor bFactor
 func NewRandomGraph(nodeCount int, bFactor float32) Graph {
 	g := New(nodeCount)
