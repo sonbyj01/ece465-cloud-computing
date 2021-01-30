@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/rand"
 	"proj1/graph"
+	"runtime"
 	"testing"
 )
 
@@ -68,6 +69,10 @@ func TestIndices(t *testing.T) {
 	if g := graph.NewRandomGraph(N, bf); !checkIndices(&g, N) {
 		t.Errorf("NewRandomGraph creates wrong indices")
 	}
+
+	if g := graph.NewRandomGraphParallel(N, bf, 50); !checkIndices(&g, N) {
+		t.Errorf("NewRandomGraphParallel creates wrong indices")
+	}
 }
 
 // TestSequential checks that the sequential coloring works
@@ -129,13 +134,13 @@ func TestParallel(t *testing.T) {
 // BenchmarkSequential times the output of the sequential coloring on a
 // large random graph
 func BenchmarkSequential(b *testing.B) {
-	N := 15000
-	bf := float32(100)
+	N := 50000
+	bf := float32(250)
 	maxColor := 3 * N / 2
 
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		g := graph.NewRandomGraph(N, bf)
+		g := graph.NewRandomGraphParallel(N, bf, 50)
 		b.StartTimer()
 
 		colorSequential(&g, maxColor)
@@ -145,15 +150,57 @@ func BenchmarkSequential(b *testing.B) {
 // BenchmarkParallel times the output of the sequential coloring on a
 // large random graph
 func BenchmarkParallel(b *testing.B) {
-	N := 15000
-	bf := float32(100)
+	N := 50000
+	bf := float32(250)
 	maxColor := 3 * N / 2
 
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		g := graph.NewRandomGraph(N, bf)
+		g := graph.NewRandomGraphParallel(N, bf, 50)
 		b.StartTimer()
 
 		colorParallel(&g, maxColor)
+	}
+}
+
+// BenchmarkNewGraph benches the time to generate a new graph
+// and number its nodes
+func BenchmarkNewGraph(b *testing.B) {
+	N := 50000
+
+	for i := 0; i < b.N; i++ {
+		graph.New(N)
+	}
+}
+
+// BenchmarkNewGraphParallel benches the time to generate a new graph
+// and number its nodes in parallel
+func BenchmarkNewGraphParallel(b *testing.B) {
+	N := 50000
+
+	for i := 0; i < b.N; i++ {
+		graph.NewParallel(N, runtime.NumCPU())
+	}
+}
+
+// BenchmarkNewRandomGraph benches the time it takes to generate
+// a new random graph
+func BenchmarkNewRandomGraph(b *testing.B) {
+	N := 10000
+	bf := float32(100)
+
+	for i := 0; i < b.N; i++ {
+		graph.NewRandomGraph(N, bf)
+	}
+}
+
+// BenchmarkNewRandomGraphParallel benches the time it takes to generate
+// a new random graph in parallel
+func BenchmarkNewRandomGraphParallel(b *testing.B) {
+	N := 10000
+	bf := float32(100)
+
+	for i := 0; i < b.N; i++ {
+		graph.NewRandomGraphParallel(N, bf, 50)
 	}
 }

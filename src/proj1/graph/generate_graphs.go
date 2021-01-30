@@ -2,6 +2,7 @@ package graph
 
 import (
 	"math/rand"
+	"sync"
 )
 
 // NewCompleteGraph generates a complete graph with nodeCount nodes
@@ -49,6 +50,41 @@ func NewRandomGraph(nodeCount int, bFactor float32) Graph {
 			}
 		}
 	}
+
+	return g
+}
+
+// NewRandomGraphParallel generates a random graph in parallel
+func NewRandomGraphParallel(nodeCount int, bFactor float32,
+	nThreads int) Graph {
+
+	g := NewParallel(nodeCount, nThreads)
+
+	var nodesPerThread int
+	if nodeCount % nThreads == 0 {
+		nodesPerThread = nodeCount / nThreads
+	} else {
+		nodesPerThread = (nodeCount + nThreads) / nThreads
+	}
+
+	pEdge := bFactor / float32(nodeCount-1)
+
+	var wg sync.WaitGroup
+	wg.Add(nThreads)
+
+	for i := 0; i < nThreads; i++ {
+		go func(start int) {
+			defer wg.Done()
+			for j := start; j < start + nodesPerThread && j < nodeCount; j++ {
+				for k := 0; k < i; k++ {
+					if rand.Float32() < pEdge {
+						g.AddUndirectedEdge(j, k)
+					}
+				}
+			}
+		}(i * nodesPerThread)
+	}
+	wg.Wait()
 
 	return g
 }
