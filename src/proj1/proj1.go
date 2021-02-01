@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"proj1/graph"
 	"sync"
 )
@@ -11,12 +10,18 @@ import (
 func colorSequential(g *graph.Graph, maxColor int) {
 	neighborColors := make([]bool, maxColor)
 
-	for _, node := range g.Nodes {
+	for i := range g.Nodes {
+		node := &g.Nodes[i]
+
 		for i := 0; i < maxColor; i++ {
 			neighborColors[i] = false
 		}
 
 		for _, neighbor := range node.Adj {
+			// TODO: remove; this was a problem at some point
+			if neighbor == nil {
+				panic("Nil in adjacency list")
+			}
 			neighborColors[neighbor.Value] = true
 		}
 
@@ -112,23 +117,42 @@ func colorParallel(g *graph.Graph, maxColor int) {
 	}
 }
 
+func benchmarkColoring2(N int, bf float32, parallel bool) {
+	maxColor := 3 * N / 2
+
+	coloringAlgorithm := colorSequential
+	if parallel {
+		coloringAlgorithm = colorParallel
+	}
+
+	for i := 0; i < 10; i++ {
+		//b.StopTimer()
+		g := graph.NewRandomGraphParallel(N, bf, 50)
+		//b.StartTimer()
+
+		coloringAlgorithm(&g, maxColor)
+	}
+}
+
 // main is a sample entrypoint to show how to generate a graph and use the
 // graph coloring functions, but you can see that most of our tests and
 // benchmarks are in proj1_test.go
 func main() {
-	N := 12000
+	benchmarkColoring2(1000, 100, false)
 
-	fmt.Printf("Generating complete graph...\n")
-	completeGraph := graph.NewCompleteGraph(N)
-
-	// maxColor for a very simple coloring algorithm
-	maxColor := 3 * N / 2
-
-	// perform coloring
-	fmt.Printf("Graph coloring...\n")
-	//colorParallel(&completeGraph, maxColor)
-	colorSequential(&completeGraph, maxColor)
-
-	// check that the graph coloring worked
-	fmt.Printf("isColored: %t", completeGraph.CheckValidColoring())
+	//N := 12000
+	//
+	//fmt.Printf("Generating complete graph...\n")
+	//completeGraph := graph.NewCompleteGraph(N)
+	//
+	//// maxColor for a very simple coloring algorithm
+	//maxColor := 3 * N / 2
+	//
+	//// perform coloring
+	//fmt.Printf("Graph coloring...\n")
+	////colorParallel(&completeGraph, maxColor)
+	//colorSequential(&completeGraph, maxColor)
+	//
+	//// check that the graph coloring worked
+	//fmt.Printf("isColored: %t", completeGraph.CheckValidColoring())
 }

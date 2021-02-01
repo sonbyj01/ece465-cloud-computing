@@ -36,7 +36,8 @@ NP-complete problem (and thus the only exact algorithms are
 exponential-time algorithms), there exist efficient randomized, distributed
 algorithms that can approximate the chromatic number (and perform fairly
 well in real-world tasks). There are a number of known sequential and parallel
-algorithms
+algorithms, and we chose a fairly simple one for the first revision of this
+project.
 
 The algorithm we choose is called the
 Gebremedhin-Manne algorithm, which is described in [this OSTI presentation][1];
@@ -163,7 +164,49 @@ multithreading also offers no extra space complexity (i.e., it is still `O(1)`).
 However, it is realistic to say that it is `O(T)`, where `T` is the number of
 spawned threads (or goroutines in our case).
 
-TODO: empirical runtime
+##### Empirical results:
+Here are some results when running (from the base directory of this repo) on
+an i7-2600 (4C8T CPU):
+```bash
+$ GOPATH=$(pwd) go test -bench=Color* -benchtime=5s -timeout 20m ./src/proj1/
+goos: linux                                                                  
+goarch: amd64                                                                   
+pkg: proj1                                                                      
+BenchmarkColorSequentialV100Bf10-8                300000             22569 ns/op
+BenchmarkColorSequentialV1000Bf100-8               10000           1099579 ns/op
+BenchmarkColorSequentialV10000Bf1000-8               100         101073543 ns/op
+BenchmarkColorSequentialV50000Bf5000-8                 2        2616737085 ns/op
+BenchmarkColorParallelV100Bf10-8                  100000             93178 ns/op
+BenchmarkColorParallelV1000Bf100-8                 10000           1015243 ns/op
+BenchmarkColorParallelV10000Bf1000-8                 100          82688240 ns/op
+BenchmarkColorParallelV50000Bf5000-8                   3        1810347664 ns/op
+```
+This includes sequential and parallel runtimes for graphs with uniform branching
+factors (ignore the number in the middle; this is related to Go's benchmarking
+tool). The graph sizes are: G1=(vertices=100, average degree=10); G2=(1000,
+100); G3=(10000, 1000); G4=(50000, 5000). The expected runtime, per the analysis
+above, is roughly `O(Vb)`, so we would expect G2 to take 2 orders of magnitude
+longer than G1, G3 to take 2 orders of magnitude longer than G2, and G4 to take
+25 times as long as G3. By our very rough estimate of parallel runtime, we would
+expect the time to be reduced by a factor of `N` (in this case, `N=8`).
+
+We see that this pattern is roughly true for G2, G3, and G4 using the sequential
+algorithm (G1 might be too small for it to fit the asymptotic bound).
+
+We see a roughly similar pattern with the parallel runtimes, but we did not
+achieve anywhere near an eight-times speedup. There is likely a large overhead
+with running the goroutines, especially on smaller graphs (we see that the
+sequential algorithm outperforms the parallel one on G1 and almost on G2).
+This may be due to a number of things, most likely the creation of so many
+goroutines (we create one for each node). It is at least promising that we
+achieved any speedup, and it looks like the speedup increases as the graph
+gets larger; unfortunately, at this point the test system almost ran out of RAM
+and we were unable to experiment further at this point.
+
+In the next revision of the algorithm,
+we will experiment with lowering the number of goroutines to reduce the memory
+overhead and overhead of pseudo-context switches (i.e., the overhead of the
+goroutine scheduling), and whatever other optimizations we can find.
 
 ##### Next Steps: Scaling Up to Multi-Node
 (For project 2)

@@ -223,9 +223,9 @@ func BenchmarkColorSequentialV10000Bf1000(b *testing.B) {
 	benchmarkColoring(b, 10000, 1000, false)
 }
 
-// BenchmarkColorSequentialV50000Bf1000 benchmarks sequential coloring with
+// BenchmarkColorSequentialV50000Bf5000 benchmarks sequential coloring with
 // 50000 nodes and average branching factor of 5000
-func BenchmarkColorSequentialV50000Bf1000(b *testing.B) {
+func BenchmarkColorSequentialV50000Bf5000(b *testing.B) {
 	benchmarkColoring(b, 50000, 5000, false)
 }
 
@@ -247,8 +247,8 @@ func BenchmarkColorParallelV10000Bf1000(b *testing.B) {
 	benchmarkColoring(b, 10000, 1000, true)
 }
 
-// BenchmarkColorParallelV50000Bf1000 benchmarks sequential coloring with 50000
+// BenchmarkColorParallelV50000Bf5000 benchmarks sequential coloring with 50000
 // nodes and average branching factor of 5000
-func BenchmarkColorParallelV50000Bf1000(b *testing.B) {
+func BenchmarkColorParallelV50000Bf5000(b *testing.B) {
 	benchmarkColoring(b, 50000, 5000, true)
 }
