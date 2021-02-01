@@ -1,6 +1,9 @@
 package graph
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 // Node represents a node of a Graph object, with an adjacency list
 // of pointers to other nodes
@@ -8,6 +11,7 @@ type Node struct {
 	Value int
 	Index int
 	Adj   []*Node
+	Mutex sync.Mutex
 }
 
 // Graph represents a very simple graph data structure
@@ -28,12 +32,39 @@ func New(nodeCount int) Graph {
 	return g
 }
 
+// NewParallel returns a new graph numbered in parallel
+func NewParallel(nodeCount int, nThreads int) Graph {
+	g := Graph{make([]Node, nodeCount)}
+
+	var nodesPerThread int
+	if nodeCount % nThreads == 0 {
+		nodesPerThread = nodeCount / nThreads
+	} else {
+		nodesPerThread = (nodeCount + nThreads) / nThreads
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(nThreads)
+	for i := 0; i < nThreads; i++ {
+		go func(start int) {
+			defer wg.Done()
+			for j := start; j < start + nodesPerThread && j < nodeCount; j++ {
+				g.Nodes[j].Index = j
+			}
+		}(i * nodesPerThread)
+	}
+	wg.Wait()
+
+	return g
+}
+
 // AddNode adds a node to a graph
 func (g *Graph) AddNode(value int) {
 	g.Nodes = append(g.Nodes, Node{
 		value,
 		len(g.Nodes),
 		make([]*Node, 0),
+		sync.Mutex{},
 	})
 }
 
@@ -52,8 +83,12 @@ func (g *Graph) AddUndirectedEdge(n1, n2 int) {
 // Note that this doesn't check if the second node is within the same graph,
 // and this doesn't check for duplicate edges
 func (n1 *Node) AddUndirectedEdge(n2 *Node) {
+	n1.Mutex.Lock()
+	n2.Mutex.Lock()
 	n2.Adj = append(n2.Adj, n1)
 	n1.Adj = append(n1.Adj, n2)
+	n2.Mutex.Unlock()
+	n1.Mutex.Unlock()
 }
 
 // Print prints out a list of a graph's nodes and values, as well as their

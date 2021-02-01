@@ -112,6 +112,9 @@ func colorParallel(g *graph.Graph, maxColor int) {
 	}
 }
 
+// main is a sample entrypoint to show how to generate a graph and use the
+// graph coloring functions, but you can see that most of our tests and
+// benchmarks are in proj1_test.go
 func main() {
 	N := 12000
 
