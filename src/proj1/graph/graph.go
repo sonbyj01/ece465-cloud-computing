@@ -36,11 +36,9 @@ func New(nodeCount int) Graph {
 func NewParallel(nodeCount int, nThreads int) Graph {
 	g := Graph{make([]Node, nodeCount)}
 
-	var nodesPerThread int
-	if nodeCount % nThreads == 0 {
-		nodesPerThread = nodeCount / nThreads
-	} else {
-		nodesPerThread = (nodeCount + nThreads) / nThreads
+	nodesPerThread := nodeCount / nThreads
+	if nodeCount % nThreads != 0 {
+		nodesPerThread++
 	}
 
 	var wg sync.WaitGroup
@@ -83,20 +81,16 @@ func (g *Graph) AddUndirectedEdge(n1, n2 int) {
 // Note that this doesn't check if the second node is within the same graph,
 // and this doesn't check for duplicate edges
 func (n1 *Node) AddUndirectedEdge(n2 *Node) {
-	n1.Mutex.Lock()
-	n2.Mutex.Lock()
 	n2.Adj = append(n2.Adj, n1)
 	n1.Adj = append(n1.Adj, n2)
-	n2.Mutex.Unlock()
-	n1.Mutex.Unlock()
 }
 
 // Print prints out a list of a graph's nodes and values, as well as their
 // neighbors and values
 func (g *Graph) Print() {
-	for i, node := range g.Nodes {
-		fmt.Printf("%d: %d\n", i, node.Value)
-		for _, neighbor := range node.Adj {
+	for i := range g.Nodes {
+		fmt.Printf("%d: %d\n", i, g.Nodes[i].Value)
+		for _, neighbor := range g.Nodes[i].Adj {
 			fmt.Printf("\t%d: %d\n", neighbor.Index, neighbor.Value)
 		}
 	}
@@ -104,9 +98,9 @@ func (g *Graph) Print() {
 
 // CheckValidColoring checks whether a graph is appropriately colored
 func (g *Graph) CheckValidColoring() bool {
-	for _, node := range g.Nodes {
-		for _, neighbor := range node.Adj {
-			if node.Value == neighbor.Value {
+	for i := range g.Nodes {
+		for _, neighbor := range g.Nodes[i].Adj {
+			if g.Nodes[i].Value == neighbor.Value {
 				return false
 			}
 		}

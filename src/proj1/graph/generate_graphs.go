@@ -3,6 +3,7 @@ package graph
 import (
 	"math/rand"
 	"sync"
+	"time"
 )
 
 // NewCompleteGraph generates a complete graph with nodeCount nodes
@@ -60,11 +61,9 @@ func NewRandomGraphParallel(nodeCount int, bFactor float32,
 
 	g := NewParallel(nodeCount, nThreads)
 
-	var nodesPerThread int
-	if nodeCount % nThreads == 0 {
-		nodesPerThread = nodeCount / nThreads
-	} else {
-		nodesPerThread = (nodeCount + nThreads) / nThreads
+	nodesPerThread := nodeCount / nThreads
+	if nodeCount % nThreads != 0 {
+		nodesPerThread++
 	}
 
 	pEdge := bFactor / float32(nodeCount-1)
@@ -72,17 +71,26 @@ func NewRandomGraphParallel(nodeCount int, bFactor float32,
 	var wg sync.WaitGroup
 	wg.Add(nThreads)
 
-	for i := 0; i < nThreads; i++ {
-		go func(start int) {
-			defer wg.Done()
-			for j := start; j < start + nodesPerThread && j < nodeCount; j++ {
-				for k := 0; k < i; k++ {
-					if rand.Float32() < pEdge {
-						g.AddUndirectedEdge(j, k)
-					}
+	threadFunc := func(start int) {
+		defer wg.Done()
+		for i := start; i < start + nodesPerThread && i < nodeCount; i++ {
+			source := rand.NewSource(time.Now().UnixNano())
+			generator := rand.New(source)
+
+			for j := 0; j < i; j++ {
+				if generator.Float32() < pEdge {
+					g.Nodes[i].Mutex.Lock()
+					g.Nodes[j].Mutex.Lock()
+					g.AddUndirectedEdge(i, j)
+					g.Nodes[j].Mutex.Unlock()
+					g.Nodes[i].Mutex.Unlock()
 				}
 			}
-		}(i * nodesPerThread)
+		}
+	}
+
+	for i := 0; i < nThreads; i++ {
+		go threadFunc(i * nodesPerThread)
 	}
 	wg.Wait()
 
