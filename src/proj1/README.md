@@ -123,8 +123,47 @@ and Gebremedhin algorithms in their respective papers indicate that they provide
 a fairly good approximation of the chromatic number.
 
 ##### Runtime Analysis and Experimental Results
+Let `V` be the number of nodes, and `b` be the average node degree or branching
+factor (thus the number of edges `E` is `Vb/2`).
 
-TODO: need to write more tests to explore this
+The sequential algorithm loops over each vertex and finds the lowest valid color
+for that node (i.e., the lowest color that has not been taken by any of
+its neighbors). This is a linear search w.r.t. `b` for each node, and thus
+the algorithm has time complexity `O(Vb)=O(E)`. The space complexity of the
+algorithm is `O(1)`; we only allocate a (fixed size) buffer to keep track of
+the colors of a node's neighbors.
+
+As a very basic analysis of the parallel algorithm, if we assume:
+- zero latency in thread scheduling
+- zero latency in context switches
+- all logical cores are in use during concurrent stages of the algorithm (e.g.,
+  all threads in a pool finish at the same time)
+
+then the first stage (speculative coloring) is an ideally-parallelized version
+of the sequential algorithm, and takes `O(Vb/N)` time, if we let `N` be the
+number of parallel threads that can be run at a time (i.e., the number of
+logical cores).
+
+The second stage takes the same amount of time: the only difference is that
+no update operations are taken, but each node's color is still compared to each
+of its neighbor's colors to check that the coloring is valid. Thus each
+two-stage iteration is also `O(Vb/N)`.
+
+If we assume that few or no conflicts were found, then we're done. It is fairly
+reasonable to assume very few conflicts, since we only have a small number of
+cores (e.g., 8 on the test system) but we are looping through tens of thousands
+of nodes in our tests. Thus we would expect very few nodes to have a conflict,
+and thus the repeated iterations of this algorithm would be performed very
+quickly. With these simple assumptions, the entire algorithm is `O(Vb/N)`. Of
+course, these assumptions are false, so it is not ideally parallelizable, as we
+will see with the empirical evidence.
+
+If we also make the assumption that the threads have no memory overhead, then
+multithreading also offers no extra space complexity (i.e., it is still `O(1)`).
+However, it is realistic to say that it is `O(T)`, where `T` is the number of
+spawned threads (or goroutines in our case).
+
+TODO: empirical runtime
 
 ##### Next Steps: Scaling Up to Multi-Node
 (For project 2)
