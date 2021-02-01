@@ -13,3 +13,11 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# ViM swapfiles
+**/.*.swp
+
+# JetBrains Goland files
+.idea
+
+pkg
