@@ -34,7 +34,7 @@ func colorNodeParallel2(u []*graph.Node, start, end, maxColor int,
 }
 
 func checkNodeConflictsParallel2(u []*graph.Node, start, end int,
-	wg *sync.WaitGroup, ch chan *graph.Node) {
+	wg *sync.WaitGroup, r *[]*graph.Node, m *sync.Mutex) {
 
 	defer wg.Done()
 
@@ -42,7 +42,9 @@ func checkNodeConflictsParallel2(u []*graph.Node, start, end int,
 		node := u[i]
 		for _, neighbor := range node.Adj {
 			if neighbor.Value == node.Value && neighbor.Index > node.Index {
-				ch <- node
+				m.Lock()
+				*r = append(*r, node)
+				m.Unlock()
 				break
 			}
 		}
@@ -53,7 +55,8 @@ func checkNodeConflictsParallel2(u []*graph.Node, start, end int,
 // Gebremedhin-Manne algorithm outlined in https://www.osti.gov/biblio/1246285
 func ColorParallelGM2(g *graph.Graph, maxColor int) {
 	var wg sync.WaitGroup
-	nThreads := runtime.NumCPU() * 2
+	var m sync.Mutex
+	nThreads := 2 * runtime.NumCPU()
 
 	// set u to be a list of all of the nodes in the graph; it has
 	// to be a list of node pointers so we actually update the graph
@@ -89,8 +92,6 @@ func ColorParallelGM2(g *graph.Graph, maxColor int) {
 		// conflict resolution: generate a list of nodes to recolor
 		// provide the channel with a reasonably-sized buffer (?), since we
 		// don't need the values immediately
-		// TODO: experiment with buffer size
-		ch := make(chan *graph.Node, 256)
 		wg.Add(nThreads)
 		for i := 0; i < nThreads; i++ {
 			start := i * nodesPerThread
@@ -98,28 +99,13 @@ func ColorParallelGM2(g *graph.Graph, maxColor int) {
 			if end >= nNodes {
 				end = nNodes
 			}
-			go checkNodeConflictsParallel2(u, start, end, &wg, ch)
+			go checkNodeConflictsParallel2(u, start, end, &wg, &r, &m)
 		}
-
-		// monitor to watch for the parallel routines to finish and close the
-		// channel so the range loop below this knows when to finish; this
-		// doesn't really have to happen in parallel if we make the channel
-		// large enough, but this allows us to keep the channel buffer small
-		go func() {
-			wg.Wait()
-			close(ch)
-		}()
-
-		for node := range ch {
-			r = append(r, node)
-		}
+		wg.Wait()
 
 		// avoid reallocation: reuse buffers
 		tmp := u
 		u = r
 		r = tmp[:0]
 	}
-
-	u = nil
-	r = nil
 }
