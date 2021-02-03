@@ -1,3 +1,4 @@
+// This implementation creates one goroutine per node
 package algorithm
 
 import (

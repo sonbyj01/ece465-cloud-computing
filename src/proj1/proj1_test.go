@@ -132,6 +132,27 @@ func TestParallel(t *testing.T) {
 	if !g.CheckValidColoring() {
 		t.Errorf("NewRandomGraph is improperly colored")
 	}
+
+	t.Logf("Test: NewCompleteGraph(%d)", N)
+	g = graph.NewCompleteGraph(N)
+	algorithm.ColorParallelGM2(&g, maxColor)
+	if !g.CheckValidColoring() {
+		t.Errorf("NewCompleteGraph is improperly colored")
+	}
+
+	t.Logf("Test: NewCompleteGraph(%d)", N)
+	g = graph.NewRingGraph(N)
+	algorithm.ColorParallelGM2(&g, maxColor)
+	if !g.CheckValidColoring() {
+		t.Errorf("NewRingGraph is improperly colored")
+	}
+
+	t.Logf("Test: NewRandomGraph(%d, %f)", N, bf)
+	g = graph.NewRandomGraph(N, bf)
+	algorithm.ColorParallelGM2(&g, maxColor)
+	if !g.CheckValidColoring() {
+		t.Errorf("NewRandomGraph is improperly colored")
+	}
 }
 
 // BenchmarkNewGraph benches the time to generate a new graph
@@ -178,7 +199,7 @@ func BenchmarkNewRandomGraphParallel(b *testing.B) {
 
 // checkGraph checks the a graph to make sure that there are no nils
 // in the adjacency lists (this was a problem at some point)
-func checkGraph(g *graph.Graph) {
+func checkAdjacencyLists(g *graph.Graph) {
 	for i := range g.Nodes {
 		for j := range g.Nodes[i].Adj {
 			if g.Nodes[i].Adj[j] == nil {
@@ -188,68 +209,76 @@ func checkGraph(g *graph.Graph) {
 	}
 }
 
-// benchmarkColoring is a helper for the BenchmarkColor* benchmarks
-func benchmarkColoring(b *testing.B, N int, bf float32, parallel bool) {
-	maxColor := 3 * N / 2
+type coloringAlgorithm = func(*graph.Graph, int)
+var algorithms = []coloringAlgorithm {
+	algorithm.ColorSequential,
+	algorithm.ColorParallelGM,
+	algorithm.ColorParallelGM2,
+}
 
-	coloringAlgorithm := algorithm.ColorSequential
-	if parallel {
-		coloringAlgorithm = algorithm.ColorParallelGM
-	}
+// benchmarkColoring is a helper for the BenchmarkColor* benchmarks
+func benchmarkColoring(b *testing.B, N int, bf float32, ca coloringAlgorithm) {
+	maxColor := 3 * int(bf) / 2
 
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		g := graph.NewRandomGraphParallel(N, bf, 50)
 		b.StartTimer()
 
-		coloringAlgorithm(&g, maxColor)
+		ca(&g, maxColor)
 	}
 }
 
 // BenchmarkColorSequentialV100Bf10 benchmarks sequential.go coloring with 100
 // nodes and average branching factor of 10
 func BenchmarkColorSequentialV100Bf10(b *testing.B) {
-	benchmarkColoring(b, 100, 10, false)
+	benchmarkColoring(b, 100, 10, algorithm.ColorSequential)
 }
 
 // BenchmarkColorSequentialV1000Bf100 benchmarks sequential.go coloring with
 // 1000 nodes and average branching factor of 100
 func BenchmarkColorSequentialV1000Bf100(b *testing.B) {
-	benchmarkColoring(b, 1000, 100, false)
+	benchmarkColoring(b, 1000, 100, algorithm.ColorSequential)
 }
 
 // BenchmarkColorSequentialV10000Bf1000 benchmarks sequential.go coloring with
 // 10000 nodes and average branching factor of 1000
 func BenchmarkColorSequentialV10000Bf1000(b *testing.B) {
-	benchmarkColoring(b, 10000, 1000, false)
+	benchmarkColoring(b, 10000, 1000, algorithm.ColorSequential)
 }
 
 // BenchmarkColorSequentialV50000Bf5000 benchmarks sequential.go coloring with
 // 50000 nodes and average branching factor of 5000
 func BenchmarkColorSequentialV50000Bf5000(b *testing.B) {
-	benchmarkColoring(b, 50000, 5000, false)
+	benchmarkColoring(b, 50000, 5000, algorithm.ColorSequential)
 }
 
 // BenchmarkColorSequentialV100Bf10 benchmarks sequential.go coloring with 100
 // nodes and average branching factor of 10
 func BenchmarkColorParallelGMV100Bf10(b *testing.B) {
-	benchmarkColoring(b, 100, 10, true)
+	benchmarkColoring(b, 100, 10, algorithm.ColorParallelGM)
 }
 
 // BenchmarkColorParallelGMV1000Bf100 benchmarks sequential.go coloring with
 // 1000 nodes and average branching factor of 100
 func BenchmarkColorParallelGMV1000Bf100(b *testing.B) {
-	benchmarkColoring(b, 1000, 100, true)
+	benchmarkColoring(b, 1000, 100, algorithm.ColorParallelGM)
 }
 
 // BenchmarkColorParallelGMV10000Bf1000 benchmarks sequential.go coloring with
 // 10000 nodes and average branching factor of 1000
 func BenchmarkColorParallelGMV10000Bf1000(b *testing.B) {
-	benchmarkColoring(b, 10000, 1000, true)
+	benchmarkColoring(b, 10000, 1000, algorithm.ColorParallelGM)
 }
 
 // BenchmarkColorParallelGMV50000Bf5000 benchmarks sequential.go coloring with
 // 50000 nodes and average branching factor of 5000
 func BenchmarkColorParallelGMV50000Bf5000(b *testing.B) {
-	benchmarkColoring(b, 50000, 5000, true)
+	benchmarkColoring(b, 50000, 5000, algorithm.ColorParallelGM)
+}
+
+// BenchmarkColorParallelGMV50000Bf5000 benchmarks sequential.go coloring with
+// 50000 nodes and average branching factor of 5000
+func BenchmarkColorParallelGM2V50000Bf5000(b *testing.B) {
+	benchmarkColoring(b, 50000, 5000, algorithm.ColorParallelGM2)
 }

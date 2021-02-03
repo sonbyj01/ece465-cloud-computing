@@ -6,19 +6,14 @@ import "proj1/graph"
 // (suboptimal chromatic number, but very simple valid coloring)
 func ColorSequential(g *graph.Graph, maxColor int) {
 	neighborColors := make([]bool, maxColor)
+	neighborColorsDefault := make([]bool, maxColor)
 
 	for i := range g.Nodes {
 		node := &g.Nodes[i]
 
-		for i := 0; i < maxColor; i++ {
-			neighborColors[i] = false
-		}
+		copy(neighborColors, neighborColorsDefault)
 
 		for _, neighbor := range node.Adj {
-			// TODO: remove; this was a problem at some point
-			if neighbor == nil {
-				panic("Nil in adjacency list")
-			}
 			neighborColors[neighbor.Value] = true
 		}
 
