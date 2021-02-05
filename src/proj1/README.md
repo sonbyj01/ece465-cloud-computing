@@ -249,6 +249,19 @@ The second revision differs from the first revision in that:
   to a mutex lock and directly appending to the array rather than sending
   it to the mainline, since we are basing our algorithm on a shared-memory
   system anyway.
+- The `maxColor` variable was used to simplify our algorithm since the
+  (approximate) coloring number is not known beforehand. In the first revision,
+  we set it to `3*V/2` by default by mistake. We know that the maximum (exact)
+  chromatic number is the largest degree of a node + 1; thus, it should be
+  `3*d/2`. (The factor of 1.5 is used to ensure safety.) We believe this also
+  helped speed up all of the algorithm versions from revision, especially the
+  parallel algorithm from revision 1, since:
+    - The second bullet point doesn't apply due to the stated reasons
+    - This greatly reduces the amount of memory allocation per vertex/goroutine)
+    - We didn't actually change any of the implementation of the first
+      revision, but `maxColor` is given as a parameter (set in `proj1_test.go`)
+      and the benchmark for this unchanged algorithm is much faster than the
+      previous revision, especially for larger graphs.
 
 On the same test system as before (i7-2600 (4C/8T) and 8GB RAM), we achieved
 the following results. We achieve up to a 48% speedup (2 times speedup) on the
