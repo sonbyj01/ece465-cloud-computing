@@ -78,7 +78,7 @@ func TestIndices(t *testing.T) {
 	}
 }
 
-// TestSequential checks that the sequential.go coloring works
+// TestSequential checks that the sequential coloring works
 func TestSequential(t *testing.T) {
 	N := 1000
 	bf := float32(30)
