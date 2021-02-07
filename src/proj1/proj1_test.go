@@ -20,10 +20,9 @@ func countEdges(g graph.Graph) int {
 	return edges
 }
 
-// TestBranchingFactor verifies that the branching factor is
-// approximately correct
-func TestBranchingFactor(t *testing.T) {
-	const maxGraphSize, maxBfRatio, threshold = 1000, 0.75, 0.20
+// TestAverageDegree verifies that the average degree is within tolerance
+func TestAverageDegree(t *testing.T) {
+	const maxGraphSize, maxBfRatio, tolerance = 1000, 0.75, 0.20
 
 	// try some random large graph sizes and branching factors
 	for i := 0; i < 20; i++ {
@@ -35,53 +34,17 @@ func TestBranchingFactor(t *testing.T) {
 
 		t.Logf("Test: NewRandomGraph(%d, %f)", N, desiredBf)
 
-		if math.Abs(desiredBf-actualBf) > threshold*desiredBf {
+		if math.Abs(desiredBf-actualBf) > tolerance*desiredBf {
 			t.Errorf("Branching factor error. Got %f, desired %f",
 				actualBf, desiredBf)
 		}
 	}
 }
 
-// checkIndices is a helper for TestIndices
-//func checkIndices(g *graph.Graph, n int) bool {
-//	if n != len(g.Nodes) {
-//		return false
-//	}
-//	for i := range g.Nodes {
-//		if i != g.Nodes[i].Index {
-//			return false
-//		}
-//	}
-//	return true
-//}
-
-// TestIndices verifies that the indices are correct
-//func TestIndices(t *testing.T) {
-//	N := 1000
-//	bf := float32(30)
-//
-//	if g := graph.NewCompleteGraph(N); !checkIndices(&g, N) {
-//		t.Errorf("NewCompleteGraph creates wrong indices")
-//	}
-//
-//	if g := graph.NewRingGraph(N); !checkIndices(&g, N) {
-//		t.Errorf("NewRingGraph creates wrong indices")
-//	}
-//
-//	if g := graph.NewRandomGraph(N, bf); !checkIndices(&g, N) {
-//		t.Errorf("NewRandomGraph creates wrong indices")
-//	}
-//
-//	if g := graph.NewRandomGraphParallel(N, bf, 50);
-//		!checkIndices(&g, N) {
-//		t.Errorf("NewRandomGraphParallel creates wrong indices")
-//	}
-//}
-
 // TestSequential checks that the sequential coloring works
 func TestSequential(t *testing.T) {
 	N := 1000
-	bf := float32(30)
+	deg := float32(30)
 	maxColor := 1000
 
 	t.Logf("Test: NewCompleteGraph(%d)", N)
@@ -98,8 +61,8 @@ func TestSequential(t *testing.T) {
 		t.Errorf("NewRingGraph is improperly colored")
 	}
 
-	t.Logf("Test: NewRandomGraph(%d, %f)", N, bf)
-	g = graph.NewRandomGraph(N, bf)
+	t.Logf("Test: NewRandomGraph(%d, %f)", N, deg)
+	g = graph.NewRandomGraph(N, deg)
 	sequential.ColorSequential(&g, maxColor)
 	if !g.CheckValidColoring() {
 		t.Errorf("NewRandomGraph is improperly colored")
@@ -109,7 +72,7 @@ func TestSequential(t *testing.T) {
 // TestParallel checks that the parallel coloring works
 func TestParallel(t *testing.T) {
 	N := 1000
-	bf := float32(30)
+	deg := float32(30)
 	maxColor := 1000
 
 	t.Logf("Test: NewCompleteGraph(%d)", N)
@@ -126,8 +89,8 @@ func TestParallel(t *testing.T) {
 		t.Errorf("NewRingGraph is improperly colored")
 	}
 
-	t.Logf("Test: NewRandomGraph(%d, %f)", N, bf)
-	g = graph.NewRandomGraph(N, bf)
+	t.Logf("Test: NewRandomGraph(%d, %f)", N, deg)
+	g = graph.NewRandomGraph(N, deg)
 	parallel.ColorParallelGM(&g, maxColor)
 	if !g.CheckValidColoring() {
 		t.Errorf("NewRandomGraph is improperly colored")
@@ -147,8 +110,8 @@ func TestParallel(t *testing.T) {
 		t.Errorf("NewRingGraph is improperly colored")
 	}
 
-	t.Logf("Test: NewRandomGraph(%d, %f)", N, bf)
-	g = graph.NewRandomGraph(N, bf)
+	t.Logf("Test: NewRandomGraph(%d, %f)", N, deg)
+	g = graph.NewRandomGraph(N, deg)
 	parallel.ColorParallelGM2(&g, maxColor)
 	if !g.CheckValidColoring() {
 		t.Errorf("NewRandomGraph is improperly colored")
@@ -165,24 +128,14 @@ func BenchmarkNewGraph(b *testing.B) {
 	}
 }
 
-//// BenchmarkNewGraphParallel benches the time to generate a new graph
-//// and number its nodes in parallel
-//func BenchmarkNewGraphParallel(b *testing.B) {
-//	N := 50000
-//
-//	for i := 0; i < b.N; i++ {
-//		graph.New(N)
-//	}
-//}
-
 // BenchmarkNewRandomGraph benches the time it takes to generate
 // a new random graph
 func BenchmarkNewRandomGraph(b *testing.B) {
 	N := 10000
-	bf := float32(1000)
+	deg := float32(1000)
 
 	for i := 0; i < b.N; i++ {
-		graph.NewRandomGraph(N, bf)
+		graph.NewRandomGraph(N, deg)
 	}
 }
 
@@ -190,40 +143,22 @@ func BenchmarkNewRandomGraph(b *testing.B) {
 // a new random graph in parallel
 func BenchmarkNewRandomGraphParallel(b *testing.B) {
 	N := 10000
-	bf := float32(1000)
+	deg := float32(1000)
 
 	for i := 0; i < b.N; i++ {
-		graph.NewRandomGraphParallel(N, bf, 50)
+		graph.NewRandomGraphParallel(N, deg, 50)
 	}
 }
 
-//// checkGraph checks the a graph to make sure that there are no nils
-//// in the adjacency lists (this was a problem at some point)
-//func checkAdjacencyLists(g *graph.Graph) {
-//	for i := range g.Nodes {
-//		for j := range g.Nodes[i].Adj {
-//			if g.Nodes[i].Adj[j] == nil {
-//				panic("Nil in adjacency list")
-//			}
-//		}
-//	}
-//}
-
 type coloringAlgorithm = func(*graph.Graph, int)
 
-var algorithms = []coloringAlgorithm{
-	sequential.ColorSequential,
-	parallel.ColorParallelGM,
-	parallel.ColorParallelGM2,
-}
-
 // benchmarkColoring is a helper for the BenchmarkColor* benchmarks
-func benchmarkColoring(b *testing.B, N int, bf float32, ca coloringAlgorithm) {
-	maxColor := 3 * int(bf) / 2
+func benchmarkColoring(b *testing.B, N int, deg float32, ca coloringAlgorithm) {
+	maxColor := 3 * int(deg) / 2
 
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		g := graph.NewRandomGraphParallel(N, bf, 50)
+		g := graph.NewRandomGraphParallel(N, deg, 50)
 		b.StartTimer()
 
 		ca(&g, maxColor)
