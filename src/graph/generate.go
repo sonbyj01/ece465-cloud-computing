@@ -7,48 +7,39 @@ import (
 )
 
 // New returns a new graph
-// Since this is namespaced under the graph package, can be used from the
-// outside as graph.New(...)
-func New(nodeCount int) Graph {
-	g := Graph{make([]Node, nodeCount)}
-
-	for i := 0; i < nodeCount; i++ {
-		g.Nodes[i].Index = i
-	}
-
-	return g
+func New(nVertices int) Graph {
+	return Graph{make([]Vertex, nVertices)}
 }
 
-// NewParallel returns a new graph numbered in parallel
-func NewParallel(nodeCount int, nThreads int) Graph {
-	g := Graph{make([]Node, nodeCount)}
-
-	nodesPerThread := nodeCount / nThreads
-	if nodeCount % nThreads != 0 {
-		nodesPerThread++
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(nThreads)
-	for i := 0; i < nThreads; i++ {
-		go func(start int) {
-			defer wg.Done()
-			for j := start; j < start + nodesPerThread && j < nodeCount; j++ {
-				g.Nodes[j].Index = j
-			}
-		}(i * nodesPerThread)
-	}
-	wg.Wait()
-
-	return g
-}
+//// NewParallel returns a new graph numbered in parallel
+//func NewParallel(nVertices int, nThreads int) Graph {
+//	g := Graph{make([]Node, nodeCount)}
+//
+//	nodesPerThread := nodeCount / nThreads
+//	if nodeCount % nThreads != 0 {
+//		nodesPerThread++
+//	}
+//
+//	var wg sync.WaitGroup
+//	wg.Add(nThreads)
+//	for i := 0; i < nThreads; i++ {
+//		go func(start int) {
+//			defer wg.Done()
+//			for j := start; j < start + nodesPerThread && j < nodeCount; j++ {
+//				g.Nodes[j].Index = j
+//			}
+//		}(i * nodesPerThread)
+//	}
+//	wg.Wait()
+//
+//	return g
+//}
 
 // AddNode adds a node to a graph
 func (g *Graph) AddNode(value int) {
-	g.Nodes = append(g.Nodes, Node{
+	g.Vertices = append(g.Vertices, Vertex{
 		value,
-		len(g.Nodes),
-		make([]*Node, 0),
+		make([]int, 0),
 		sync.Mutex{},
 	})
 }
@@ -56,21 +47,21 @@ func (g *Graph) AddNode(value int) {
 // AddUndirectedEdge adds an undirected edge between two nodes in a graph
 // Note that this doesn't check for duplicate edges
 func (g *Graph) AddUndirectedEdge(n1, n2 int) {
-	if n1 >= len(g.Nodes) || n2 >= len(g.Nodes) {
+	if n1 >= len(g.Vertices) || n2 >= len(g.Vertices) {
 		panic("Invalid node indices")
 	}
 
-	g.Nodes[n1].Adj = append(g.Nodes[n1].Adj, &g.Nodes[n2])
-	g.Nodes[n2].Adj = append(g.Nodes[n2].Adj, &g.Nodes[n1])
+	g.Vertices[n1].Adj = append(g.Vertices[n1].Adj, n2)
+	g.Vertices[n2].Adj = append(g.Vertices[n2].Adj, n1)
 }
 
-// AddUndirectedEdge adds an undirected edge to another node pointer
-// Note that this doesn't check if the second node is within the same graph,
-// and this doesn't check for duplicate edges
-func (n1 *Node) AddUndirectedEdge(n2 *Node) {
-	n2.Adj = append(n2.Adj, n1)
-	n1.Adj = append(n1.Adj, n2)
-}
+//// AddUndirectedEdge adds an undirected edge to another node pointer
+//// Note that this doesn't check if the second node is within the same graph,
+//// and this doesn't check for duplicate edges
+//func (n1 *Node) AddUndirectedEdge(n2 *Node) {
+//	n2.Adj = append(n2.Adj, n1)
+//	n1.Adj = append(n1.Adj, n2)
+//}
 
 // NewCompleteGraph generates a complete graph with nodeCount nodes
 func NewCompleteGraph(nodeCount int) Graph {
@@ -103,12 +94,12 @@ func NewRingGraph(nodeCount int) Graph {
 
 // NewRandomGraph generates a graph with nodeCount nodes and average
 // branching factor bFactor
-func NewRandomGraph(nodeCount int, bFactor float32) Graph {
+func NewRandomGraph(nodeCount int, degree float32) Graph {
 	g := New(nodeCount)
 
 	// if branching factor is bFactor, then given n1, n2 nodes in g, then the
 	// probability of an undirected edge is bFactor / (nodeCount - 1)
-	pEdge := bFactor / float32(nodeCount-1)
+	pEdge := degree / float32(nodeCount-1)
 
 	for i := 1; i < nodeCount; i++ {
 		for j := 0; j < i; j++ {
@@ -122,34 +113,35 @@ func NewRandomGraph(nodeCount int, bFactor float32) Graph {
 }
 
 // NewRandomGraphParallel generates a random graph in parallel
-func NewRandomGraphParallel(nodeCount int, bFactor float32,
+func NewRandomGraphParallel(nVertices int, degree float32,
 	nThreads int) Graph {
 
-	g := NewParallel(nodeCount, nThreads)
+	//g := NewParallel(nodeCount, nThreads)
+	g := New(nVertices)
 
-	nodesPerThread := nodeCount / nThreads
-	if nodeCount % nThreads != 0 {
+	nodesPerThread := nVertices / nThreads
+	if nVertices%nThreads != 0 {
 		nodesPerThread++
 	}
 
-	pEdge := bFactor / float32(nodeCount-1)
+	pEdge := degree / float32(nVertices-1)
 
 	var wg sync.WaitGroup
 	wg.Add(nThreads)
 
 	threadFunc := func(start int) {
 		defer wg.Done()
-		for i := start; i < start + nodesPerThread && i < nodeCount; i++ {
+		for i := start; i < start+nodesPerThread && i < nVertices; i++ {
 			source := rand.NewSource(time.Now().UnixNano())
 			generator := rand.New(source)
 
 			for j := 0; j < i; j++ {
 				if generator.Float32() < pEdge {
-					g.Nodes[i].Mutex.Lock()
-					g.Nodes[j].Mutex.Lock()
+					g.Vertices[i].Mutex.Lock()
+					g.Vertices[j].Mutex.Lock()
 					g.AddUndirectedEdge(i, j)
-					g.Nodes[j].Mutex.Unlock()
-					g.Nodes[i].Mutex.Unlock()
+					g.Vertices[j].Mutex.Unlock()
+					g.Vertices[i].Mutex.Unlock()
 				}
 			}
 		}

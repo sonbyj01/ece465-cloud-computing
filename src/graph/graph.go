@@ -6,16 +6,15 @@ import (
 	"sync"
 )
 
-// Node represents a node of a Graph object, with an adjacency list
-// of pointers to other nodes
-type Node struct {
+// Vertex represents a vertex (node) of a Graph object, with an adjacency list
+// of indices of other vertices
+type Vertex struct {
 	Value int
-	Index int
-	Adj   []*Node
+	Adj   []int
 	Mutex sync.Mutex
 }
 
 // Graph represents a very simple graph data structure
 type Graph struct {
-	Nodes []Node
+	Vertices []Vertex
 }

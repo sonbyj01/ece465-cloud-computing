@@ -8,19 +8,19 @@ func ColorSequential(g *graph.Graph, maxColor int) {
 	neighborColors := make([]bool, maxColor)
 	neighborColorsDefault := make([]bool, maxColor)
 
-	for i := range g.Nodes {
-		node := &g.Nodes[i]
+	for i := range g.Vertices {
+		node := &g.Vertices[i]
 
 		copy(neighborColors, neighborColorsDefault)
 
-		for _, neighbor := range node.Adj {
-			neighborColors[neighbor.Value] = true
+		for _, j := range node.Adj {
+			neighborColors[g.Vertices[j].Value] = true
 		}
 
 		colorFound := false
-		for i := 0; i < maxColor; i++ {
-			if !neighborColors[i] {
-				g.Nodes[node.Index].Value = i
+		for j := 0; j < maxColor; j++ {
+			if !neighborColors[j] {
+				g.Vertices[i].Value = j
 				colorFound = true
 				break
 			}
