@@ -1,6 +1,6 @@
-package algorithm
+package sequential
 
-import "proj1/graph"
+import "graph"
 
 // ColorSequential performs a naive sequential.go Delta+1 coloring
 // (suboptimal chromatic number, but very simple valid coloring)

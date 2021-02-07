@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"proj1/algorithm"
-	"proj1/graph"
+	"graph"
+	"graphalgo/color/sequential"
 )
 
 // main is a sample entrypoint to show how to generate a graph and use the
@@ -15,13 +15,13 @@ func main() {
 	fmt.Printf("Generating complete graph...\n")
 	completeGraph := graph.NewCompleteGraph(N)
 
-	// maxColor for a very simple coloring algorithm
+	// maxColor for a very simple coloring color
 	maxColor := 3 * N / 2
 
 	// perform coloring
 	fmt.Printf("Graph coloring...\n")
-	//algorithm.ColorParallelGM(&completeGraph, maxColor)
-	algorithm.ColorSequential(&completeGraph, maxColor)
+	//color.ColorParallelGM(&completeGraph, maxColor)
+	sequential.ColorSequential(&completeGraph, maxColor)
 
 	// check that the graph coloring worked
 	fmt.Printf("isColored: %t", completeGraph.CheckValidColoring())

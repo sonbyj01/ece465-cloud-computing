@@ -1,8 +1,8 @@
 // This implementation groups many nodes into a single goroutine
-package algorithm
+package parallel
 
 import (
-	"proj1/graph"
+	"graph"
 	"runtime"
 	"sync"
 )
@@ -52,7 +52,7 @@ func checkNodeConflictsParallel2(u []*graph.Node, start, end int,
 }
 
 // ColorParallelGM is the driver for the parallel coloring scheme following the
-// Gebremedhin-Manne algorithm outlined in https://www.osti.gov/biblio/1246285
+// Gebremedhin-Manne color outlined in https://www.osti.gov/biblio/1246285
 func ColorParallelGM2(g *graph.Graph, maxColor int) {
 	var wg sync.WaitGroup
 	var m sync.Mutex
