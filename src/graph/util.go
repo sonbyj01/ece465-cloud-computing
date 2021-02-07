@@ -24,3 +24,14 @@ func (g *Graph) CheckValidColoring() bool {
 	}
 	return true
 }
+
+// Read reads a grpah from file
+func Read() Graph {
+	// TODO
+	return Graph{};
+}
+
+// Write writes a graph to file
+func (g *Graph) Write() {
+	// TODO
+}

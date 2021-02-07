@@ -1,13 +1,9 @@
 package graph
 
-// Partition simply partitions a graph into nNodes subgraphs comprising
-// consecutive vertices
-func (g *Graph) Partition(nNodes int) {
+import "graphnet"
 
-	nVertices := len(g.Vertices)
-	verticesPerNode := nVertices / nNodes
-	if nVertices%nNodes != 0 {
-		verticesPerNode++
-	}
-
+// ReadPartitionStream reads a graph from file line by line and streams it off
+// to nodes
+func ReadPartitionStream(file string, nodes []graphnet.Node) {
+	// TODO
 }

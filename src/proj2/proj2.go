@@ -1,12 +1,23 @@
 package main
 
-import (
-	"fmt"
-	"graph"
-)
+func generateGraph() {
+	// generates a graph and writes it to file
+}
 
+// run from the master
 func main() {
-	g := graph.NewRandomGraph(1000, 100)
-
-	fmt.Printf("Hello, world! %d\n", len(g.Vertices))
+	// if generate graph {
+	// 	call generateGraph()
+	// } 
+	// if master {
+	// 	read in node config (ReadConfig)
+	//	distribute information about nodes to each other
+	// 	read in graph and stream to nodes (ReadPartitionStream)
+	// 	start coloring protocol
+	// 	collect results
+	// } else if slave {
+	//	listen on port
+	//	get information about other slaves
+	//	listen for begin of coloring algo
+	// }
 }
