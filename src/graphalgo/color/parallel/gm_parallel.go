@@ -8,31 +8,36 @@ import (
 
 // colorNodeParallel speculatively colors a single node, not paying attention
 // to data consistency (this will be detected in conflict resolution)
-func colorNodeParallel(n *graph.Node, wg *sync.WaitGroup, maxColor int) {
+func colorNodeParallel(g *graph.Graph, i int, wg *sync.WaitGroup,
+	maxColor int) {
+
 	defer wg.Done()
+	v := &g.Vertices[i]
 
 	neighborColors := make([]bool, maxColor)
 
-	for _, neighbor := range n.Adj {
-		neighborColors[neighbor.Value] = true
+	for _, j := range v.Adj {
+		neighborColors[g.Vertices[j].Value] = true
 	}
 
 	for i := 0; i < maxColor; i++ {
 		if !neighborColors[i] {
-			n.Value = i
+			v.Value = i
 			return
 		}
 	}
 	panic("maxColor exceeded")
 }
 
-func checkNodeConflictsParallel(n *graph.Node, wg *sync.WaitGroup,
-	ch chan *graph.Node) {
-	defer wg.Done()
+func checkNodeConflictsParallel(g *graph.Graph, i int,
+	wg *sync.WaitGroup, ch chan int) {
 
-	for _, neighbor := range n.Adj {
-		if neighbor.Value == n.Value && neighbor.Index > n.Index {
-			ch <- n
+	defer wg.Done()
+	v := &g.Vertices[i]
+
+	for _, j := range v.Adj {
+		if g.Vertices[j].Value == v.Value && j > i {
+			ch <- i
 			return
 		}
 	}
@@ -45,9 +50,9 @@ func ColorParallelGM(g *graph.Graph, maxColor int) {
 
 	// set u to be a list of all of the nodes in the graph; it has
 	// to be a list of node pointers so we actually update the graph
-	u := make([]*graph.Node, len(g.Nodes))
-	for i := range g.Nodes {
-		u[i] = &g.Nodes[i]
+	u := make([]int, len(g.Vertices))
+	for i := range g.Vertices {
+		u[i] = i
 	}
 
 	// repeat process until run out of nodes to recolor
@@ -55,7 +60,7 @@ func ColorParallelGM(g *graph.Graph, maxColor int) {
 		// speculative coloring
 		wg.Add(len(u))
 		for i := range u {
-			go colorNodeParallel(u[i], &wg, maxColor)
+			go colorNodeParallel(g, u[i], &wg, maxColor)
 		}
 		wg.Wait()
 
@@ -63,9 +68,9 @@ func ColorParallelGM(g *graph.Graph, maxColor int) {
 		// provide the channel with a reasonably-sized buffer (?), since we
 		// don't need the values immediately
 		wg.Add(len(u))
-		ch := make(chan *graph.Node, 64)
+		ch := make(chan int, 64)
 		for i := range u {
-			go checkNodeConflictsParallel(u[i], &wg, ch)
+			go checkNodeConflictsParallel(g, u[i], &wg, ch)
 		}
 
 		// monitor to watch for the parallel routines to finish and close the
@@ -77,7 +82,7 @@ func ColorParallelGM(g *graph.Graph, maxColor int) {
 			close(ch)
 		}()
 
-		u = make([]*graph.Node, 0)
+		u = make([]int, 0)
 		for node := range ch {
 			u = append(u, node)
 		}

@@ -9,7 +9,7 @@ import (
 
 // colorNodeParallel speculatively colors a single node, not paying attention
 // to data consistency (this will be detected in conflict resolution)
-func colorNodeParallel2(u []*graph.Node, start, end, maxColor int,
+func colorNodeParallel2(g *graph.Graph, u []int, maxColor int,
 	wg *sync.WaitGroup) {
 
 	defer wg.Done()
@@ -17,33 +17,34 @@ func colorNodeParallel2(u []*graph.Node, start, end, maxColor int,
 	neighborColors := make([]bool, maxColor)
 	neighborColorsZeros := make([]bool, maxColor)
 
-	for i := start; i < end; i++ {
+	for _, i := range u {
 		copy(neighborColors[:], neighborColorsZeros[:])
 
-		for _, neighbor := range u[i].Adj {
-			neighborColors[neighbor.Value] = true
+		v := &g.Vertices[i]
+		for _, j := range v.Adj {
+			neighborColors[g.Vertices[j].Value] = true
 		}
 
 		for j := 0; j < maxColor; j++ {
 			if !neighborColors[j] {
-				u[i].Value = j
+				v.Value = j
 				break
 			}
 		}
 	}
 }
 
-func checkNodeConflictsParallel2(u []*graph.Node, start, end int,
-	wg *sync.WaitGroup, r *[]*graph.Node, m *sync.Mutex) {
+func checkNodeConflictsParallel2(g *graph.Graph, u []int, wg *sync.WaitGroup,
+	r *[]int, m *sync.Mutex) {
 
 	defer wg.Done()
 
-	for i := start; i < end; i++ {
-		node := u[i]
-		for _, neighbor := range node.Adj {
-			if neighbor.Value == node.Value && neighbor.Index > node.Index {
+	for _, i := range u {
+		v := &g.Vertices[i]
+		for _, j := range v.Adj {
+			if g.Vertices[j].Value == v.Value && j > i {
 				m.Lock()
-				*r = append(*r, node)
+				*r = append(*r, i)
 				m.Unlock()
 				break
 			}
@@ -60,32 +61,37 @@ func ColorParallelGM2(g *graph.Graph, maxColor int) {
 
 	// set u to be a list of all of the nodes in the graph; it has
 	// to be a list of node pointers so we actually update the graph
-	u := make([]*graph.Node, len(g.Nodes))
-	for i := range g.Nodes {
-		u[i] = &g.Nodes[i]
+	u := make([]int, len(g.Vertices))
+	for i := range g.Vertices {
+		u[i] = i
 	}
 
 	// create secondary buffer
-	r := make([]*graph.Node, 0, len(u)/10)
+	r := make([]int, 0, len(u)/10)
+
+	// helper function
+	min := func(a, b int) int {
+		if a < b {
+			return a
+		}
+		return b
+	}
 
 	// repeat process until run out of nodes to recolor
 	for len(u) > 0 {
-		nNodes := len(u)
+		nVertices := len(u)
 
-		nodesPerThread := nNodes / nThreads
-		if nNodes%nThreads != 0 {
+		nodesPerThread := nVertices / nThreads
+		if nVertices%nThreads != 0 {
 			nodesPerThread++
 		}
 
 		// speculative coloring
 		wg.Add(nThreads)
 		for i := 0; i < nThreads; i++ {
-			start := i * nodesPerThread
-			end := start + nodesPerThread
-			if end >= nNodes {
-				end = nNodes
-			}
-			go colorNodeParallel2(u, start, end, maxColor, &wg)
+			start := min(i * nodesPerThread, nVertices)
+			end := min(start + nodesPerThread, nVertices)
+			go colorNodeParallel2(g, u[start:end], maxColor, &wg)
 		}
 		wg.Wait()
 
@@ -94,12 +100,9 @@ func ColorParallelGM2(g *graph.Graph, maxColor int) {
 		// don't need the values immediately
 		wg.Add(nThreads)
 		for i := 0; i < nThreads; i++ {
-			start := i * nodesPerThread
-			end := start + nodesPerThread
-			if end >= nNodes {
-				end = nNodes
-			}
-			go checkNodeConflictsParallel2(u, start, end, &wg, &r, &m)
+			start := min(i * nodesPerThread, nVertices)
+			end := min(start + nodesPerThread, nVertices)
+			go checkNodeConflictsParallel2(g, u[start:end], &wg, &r, &m)
 		}
 		wg.Wait()
 
