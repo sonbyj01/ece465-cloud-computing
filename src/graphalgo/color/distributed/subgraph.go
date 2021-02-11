@@ -1,6 +1,9 @@
 package distributed
 
-import "graph"
+import (
+	"graph"
+	"graphnet"
+)
 
 type Subgraph struct {
 	graph.Graph
@@ -9,6 +12,8 @@ type Subgraph struct {
 }
 
 // sendToNodeCP sends a control message to node n
-func (sg *Subgraph) sendToNodeCP(node int) {
-	// TODO: send message to control plane
+func (sg *Subgraph) sendToNodeCP(node *graphnet.Node,
+	msg graphnet.VertexMessageType) {
+
+	//graphnet.VertexMessage{msg}
 }

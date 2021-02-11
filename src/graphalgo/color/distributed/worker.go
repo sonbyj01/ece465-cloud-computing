@@ -34,7 +34,7 @@ func colorSpeculative(u []int, maxColor int, sg *Subgraph,
 	neighborColors := make([]bool, maxColor)
 	neighborColorsDefault := make([]bool, maxColor)
 
-	// loop over vertices in superset
+	// loop over vertices for this thread
 	for _, i := range u {
 		v := &sg.Vertices[i]
 
@@ -104,9 +104,6 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
 		}
 
 		// TODO: when all speculative coloring is done, notify all nodes
-
-		// for each superset (in parallel): {
-		// }
 
 		// wait until all incoming messages are successfully received
 		// for each boundary vertex, check for conflicts (in parallel)
