@@ -64,13 +64,12 @@ func colorSpeculative(u []int, maxColor int, sg *Subgraph,
 
 // ColorDistributed is the main driver for the distributed coloring algorithm
 // on the slave node, and is called after all the connections are set up
-func ColorDistributed(sg *Subgraph, nodes []graphnet.Node, s int) {
+func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
+	maxColor, nThreads int) {
+
 	edgeVertexMap := findEdgeVertices(sg)
 	var wg sync.WaitGroup
 	nNodes := len(nodes)
-
-	// TODO: hardcoded for now, should be changed later
-	maxColor := 1000
 
 	// initialize U to be all of the vertices in sg
 	u := make([]int, len(sg.Vertices))
@@ -86,16 +85,17 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node, s int) {
 			// TODO: get node info until receive message that node is completed
 		//}
 
-		// partition u into subsets "supersteps" of size s
+		// loop over vertices, assign each vertex a permissible color
+		// send colors of boundary vertices to relevant nodes
+		// receive color information from other nodes;
+		// don't use supersteps, rather choose number of threads; channels
+		// will be buffered anyways
 		// TODO: run these in parallel
 		nVertices := len(u)
-		nSupersteps := int(math.Ceil(float64(nVertices / s)))
-		for i := 0; i < nSupersteps; i++ {
-			start := i * s
-			end := (i + 1) * s
-			if start > nVertices {
-				start = nVertices
-			}
+		verticesPerThread := int(math.Ceil(float64(nVertices / nThreads)))
+		for i := 0; i < nThreads; i++ {
+			start := i * verticesPerThread
+			end := (i + 1) * verticesPerThread
 			if end > nVertices {
 				end = nVertices
 			}
@@ -106,9 +106,6 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node, s int) {
 		// TODO: when all speculative coloring is done, notify all nodes
 
 		// for each superset (in parallel): {
-		//		loop over vertices, assign each vertex a permissible color
-		//		send colors of boundary vertices to relevant nodes
-		//		receive color information from other nodes
 		// }
 
 		// wait until all incoming messages are successfully received
