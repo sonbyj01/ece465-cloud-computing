@@ -4,7 +4,6 @@ import "graph"
 
 type Subgraph struct {
 	graph.Graph
-
-	// start and end indices
-	iBegin, iEnd	int
+	pos, iBegin, iEnd int 	// graph index/position, vertex start/end indices
+	stored map[int]int		// stored neighbor vertex values
 }

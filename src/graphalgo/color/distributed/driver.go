@@ -1,11 +1,15 @@
 package distributed
 
-import "graphnet"
+import (
+	"graphnet"
+	"math"
+	"sync"
+)
 
-// FindEdgeVertices returns a boolean array indicating which nodes are on
+// findEdgeVertices returns a boolean array indicating which nodes are on
 // the partition edge
 // TODO: can easily parallelize this over multiple cores on a single node
-func FindEdgeVertices(sg *Subgraph) []bool {
+func findEdgeVertices(sg *Subgraph) []bool {
 	edgeVertexMap := make([]bool, len(sg.Vertices))
 
 	for i := range sg.Vertices {
@@ -20,10 +24,53 @@ func FindEdgeVertices(sg *Subgraph) []bool {
 	return edgeVertexMap
 }
 
+// coloring for one vertex superset
+func colorSpeculative(u []int, maxColor int, sg *Subgraph,
+	nodes []graphnet.Node, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+	iBegin, iEnd := sg.iBegin, sg.iEnd
+	var color int
+	neighborColors := make([]bool, maxColor)
+	neighborColorsDefault := make([]bool, maxColor)
+
+	// loop over vertices in superset
+	for _, i := range u {
+		v := &sg.Vertices[i]
+
+		copy(neighborColors, neighborColorsDefault)
+
+		// speculatively color
+		for _, j := range v.Adj {
+			if j < iBegin || j >= iEnd {
+				color = sg.stored[j]
+			} else {
+				color = sg.Vertices[j - sg.iBegin].Value
+			}
+
+			neighborColors[color] = true
+		}
+
+		// find first valid color
+		for j := range neighborColors {
+			if !neighborColors[j] {
+				v.Value = j
+				// TODO: if need to notify another node, notify them
+				break
+			}
+		}
+	}
+}
+
 // ColorDistributed is the main driver for the distributed coloring algorithm
 // on the slave node, and is called after all the connections are set up
 func ColorDistributed(sg *Subgraph, nodes []graphnet.Node, s int) {
-	edgeVertexMap := FindEdgeVertices(sg)
+	edgeVertexMap := findEdgeVertices(sg)
+	var wg sync.WaitGroup
+	nNodes := len(nodes)
+
+	// TODO: hardcoded for now, should be changed later
+	maxColor := 1000
 
 	// initialize U to be all of the vertices in sg
 	u := make([]int, len(sg.Vertices))
@@ -33,12 +80,30 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node, s int) {
 
 	// loop until u is empty
 	for len(u) > 0 {
+		// listen on socket until all vertex information received
+		// TODO: do this asynchronously
+		//for nodesCompleted := 0; nodesCompleted < nNodes-1; nodesCompleted++ {
+			// TODO: get node info until receive message that node is completed
+		//}
+
 		// partition u into subsets "supersteps" of size s
+		// TODO: run these in parallel
 		nVertices := len(u)
-		verticesPerSuperstep := nVertices / s
-		if nVertices % s != 0 {
-			verticesPerSuperstep++
+		nSupersteps := int(math.Ceil(float64(nVertices / s)))
+		for i := 0; i < nSupersteps; i++ {
+			start := i * s
+			end := (i + 1) * s
+			if start > nVertices {
+				start = nVertices
+			}
+			if end > nVertices {
+				end = nVertices
+			}
+
+			go colorSpeculative(u[start:end], maxColor, sg, nodes, &wg)
 		}
+
+		// TODO: when all speculative coloring is done, notify all nodes
 
 		// for each superset (in parallel): {
 		//		loop over vertices, assign each vertex a permissible color
@@ -49,7 +114,11 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node, s int) {
 		// wait until all incoming messages are successfully received
 		// for each boundary vertex, check for conflicts (in parallel)
 		// add conflicting nodes to R
+		// TODO: implement conflict resolution
 
 		// set U to R
+		// TODO: implement this
 	}
+
+	// TODO: when done coloring, notify all nodes
 }
