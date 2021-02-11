@@ -1,23 +1,30 @@
 package main
 
-func generateGraph() {
-	// generates a graph and writes it to file
-}
+import (
+	"graphnet"
+)
 
-// run from the master
 func main() {
-	// if generate graph {
-	// 	call generateGraph()
-	// } 
-	// if master {
-	// 	read in node config (ReadConfig)
-	//	distribute information about nodes to each other
-	// 	read in graph and stream to nodes (ReadPartitionStream)
-	// 	start coloring protocol
-	// 	collect results
-	// } else if slave {
-	//	listen on port
-	//	get information about other slaves
-	//	listen for begin of coloring algo
-	// }
+	allClients = make(map[*Client]int)
+	listener, _ := net.Listen("tcp", ":8080")
+
+	for {
+		conn, err := listener.Accept()
+
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+
+		client := NewClient(conn)
+
+		for clientList, _ := range allClients {
+			if clientList.connection == nil {
+				client.connection = clientList
+				clientList.connection = client
+				fmt.Println("Connected")
+			}
+		}
+		allClients[client] = 1
+		fmt.Println(len(allClients))
+	}
 }
