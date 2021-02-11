@@ -1,5 +1,16 @@
 TODO
 
+### Build and Run Instructions
+```bash
+$ go build ./src/proj2/server
+$ go build ./src/proj2/client
+```
+
+```bash
+$ ./server --config config.node
+$ ./client --intf enps025 --port 5000
+```
+
 ### File Formats
 
 ##### Graph Description Files (*.graph)
