@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"graphnet"
 	"net"
 	"strconv"
 )
@@ -42,25 +43,22 @@ func main() {
 	}
 	defer listener.Close()
 
+	allNodes := make(map[*graphnet.Node]int)
+
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-
-		fmt.Println("Client ", conn.RemoteAddr().String(), " connected.")
-		go handleConnection(conn)
-
-		//client := graphnet.NewClient(conn)
-		//
-		//for clientList, _ := range graphnet.AllClients {
-		//	if clientList.Connection == nil {
-		//		client.Connection = clientList
-		//		clientList.Connection = client
-		//		fmt.Println("Connected")
-		//	}
-		//}
-		//graphnet.AllClients[client] = 1
+		node := graphnet.NewNode(conn)
+		for nodeList, _ := range allNodes {
+			if nodeList.Connection == nil {
+				node.Connection = nodeList
+				nodeList.Connection = node
+				fmt.Println("Connected")
+			}
+		}
+		allNodes[node] = 1
 	}
 
 	// start coloring
