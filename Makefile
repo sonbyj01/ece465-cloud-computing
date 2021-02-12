@@ -1,4 +1,11 @@
+# Makefile for Project 2 (distributed coloring algorithm)
+# @author Jonathan Lam <jlam55555@gmail.com>
+# @author Henry Son <sonbyj01@gmail.com>
+
 OUTDIR=./target
+
+# set gopath
+GOENV:=GOPATH=$(CURDIR)
 
 # versioning is created with git version and date
 GIT_BRANCH:=$(shell git status|head -n 1|awk '{print $$3}')
@@ -24,13 +31,13 @@ default:
 
 .PHONY:
 run-server:
-	go build -o $(OUTDIR)/$(SERVER_BIN)_latest ./src/proj2/server
+	$(GOENV) go build -o $(OUTDIR)/$(SERVER_BIN)_latest ./src/proj2/server
 	cp $(OUTDIR)/$(SERVER_BIN)_latest $(OUTDIR)/$(SERVER_BIN)_$(VERSION)
 	$(OUTDIR)/$(SERVER_BIN)_latest $(SERVER_FLAGS)
 
 .PHONY:
 run-client:
-	go build -o $(OUTDIR)/$(CLIENT_BIN)_latest ./src/proj2/client
+	$(GOENV) go build -o $(OUTDIR)/$(CLIENT_BIN)_latest ./src/proj2/client
 	cp $(OUTDIR)/$(CLIENT_BIN)_latest $(OUTDIR)/$(CLIENT_BIN)_$(VERSION)
 	$(OUTDIR)/$(CLIENT_BIN)_latest $(CLIENT_FLAGS)
 
