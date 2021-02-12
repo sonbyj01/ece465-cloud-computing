@@ -2,7 +2,20 @@
 # @author Jonathan Lam <jlam55555@gmail.com>
 # @author Henry Son <sonbyj01@gmail.com>
 
+### CONFIGURABLE VARIABLES
+
+# server vars
+SERVER_BIN=server
+SERVER_FLAGS=-config config.nodes
+
+# client vars
+CLIENT_BIN=client
+CLIENT_FLAGS=-port 8007
+
+# build directory
 OUTDIR=./target
+
+### DON'T MODIFY ANYTHING BELOW THIS POINT
 
 # set gopath
 GOENV:=GOPATH=$(CURDIR)
@@ -13,34 +26,59 @@ GIT_REV:=$(shell git log|head -n 1|awk '{print $$2}')
 TIMESTAMP:=$(shell TZ=UTC date "+%Y%m%d-%H%M%S")
 VERSION:=$(TIMESTAMP)_$(GIT_BRANCH)_$(GIT_REV)
 
-# server vars
-SERVER_BIN=server
-SERVER_FLAGS=-config config.nodes
+# filenames
+SERVER_VERFILE:=$(OUTDIR)/$(SERVER_BIN)_$(VERSION)
+SERVER_LATEST:=$(OUTDIR)/$(SERVER_BIN)_latest
+CLIENT_VERFILE:=$(OUTDIR)/$(CLIENT_BIN)_$(VERSION)
+CLIENT_LATEST:=$(OUTDIR)/$(CLIENT_BIN)_latest
 
-# client vars
-CLIENT_BIN=client
-CLIENT_FLAGS=-port 8007
-
-.PHONY:
+# Note: @ hides command: https://stackoverflow.com/a/9967125/2397327
+.PHONY: default
 default:
-	@# @ hides command: https://stackoverflow.com/a/9967125/2397327
 	@echo "Usage: make [COMMAND], where COMMAND is one of the following:"
-	@echo "	run-server: build and run the server"
-	@echo "	run-client: build and run the client"
+	@echo "	server: build server"
+	@echo "	client: build client"
+	@echo "	run-server: run server (build if necessary)"
+	@echo "	run-client: run client (build if necessary)"
 	@echo "	clean: clean built files"
 
-.PHONY:
-run-server:
-	$(GOENV) go build -o $(OUTDIR)/$(SERVER_BIN)_latest ./src/proj2/server
-	cp $(OUTDIR)/$(SERVER_BIN)_latest $(OUTDIR)/$(SERVER_BIN)_$(VERSION)
-	$(OUTDIR)/$(SERVER_BIN)_latest $(SERVER_FLAGS)
+# canned recipes because we may want to always rebuild server or not
+define BUILD_SERVER=
+$(GOENV) go build -o $(SERVER_LATEST) ./src/proj2/server
+cp $(SERVER_LATEST) $(SERVER_VERFILE)
+endef
+define BUILD_CLIENT=
+$(GOENV) go build -o $(CLIENT_LATEST) ./src/proj2/client
+cp $(CLIENT_LATEST) $(CLIENT_VERFILE)
+endef
 
-.PHONY:
-run-client:
-	$(GOENV) go build -o $(OUTDIR)/$(CLIENT_BIN)_latest ./src/proj2/client
-	cp $(OUTDIR)/$(CLIENT_BIN)_latest $(OUTDIR)/$(CLIENT_BIN)_$(VERSION)
-	$(OUTDIR)/$(CLIENT_BIN)_latest $(CLIENT_FLAGS)
+# build server (always rebuild since no easy way to check all deps)
+.PHONY: server
+server:
+	$(BUILD_SERVER)
 
-.PHONY:
+# non-phony target to rebuild server when necessary
+$(SERVER_LATEST):
+	$(BUILD_SERVER)
+
+# run server (only build if necessary)
+run-server: $(SERVER_LATEST)
+	$(SERVER_LATEST) $(SERVER_FLAGS)
+
+# build client (always rebuild)
+.PHONY: client
+client:
+	$(BUILD_CLIENT)
+
+# target to only rebuild client if necessary
+$(CLIENT_LATEST):
+	$(BUILD_CLIENT)
+
+# run client
+run-client: $(CLIENT_LATEST)
+	$(CLIENT_LATEST) $(CLIENT_FLAGS)
+
+# remove built executables
+.PHONY: clean
 clean:
 	rm -rf pkg target
