@@ -8,6 +8,7 @@ import (
 	"strconv"
 )
 
+// https://dev.to/alicewilliamstech/getting-started-with-sockets-in-golang-2j66
 func handleConnection(conn net.Conn) {
 	buffer, err := bufio.NewReader(conn).ReadBytes('\n')
 

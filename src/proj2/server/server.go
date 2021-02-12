@@ -49,10 +49,11 @@ func main() {
 
 		for {
 			fmt.Print("Text to send: ")
-			input, _ := reader.ReadString('\n')
+			input, _ := reader.ReadString('\n')	// request
+			fmt.Fprintf(conn, input)
 			fmt.Println(input)
-			message, _ := bufio.NewReader(conn).ReadString('\n')
-			fmt.Println("Server relay: ", message)
+			//message, _ := bufio.NewReader(conn).ReadString('\n') // response
+			//fmt.Println("Server relay: ", message)
 		}
 	}
 
