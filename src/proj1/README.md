@@ -1,4 +1,5 @@
 # ECE465 Project 1: Graph Coloring
+### Jonathan Lam & Henry Son
 
 ---
 

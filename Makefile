@@ -44,12 +44,12 @@ default:
 
 # canned recipes because we may want to always rebuild server or not
 define BUILD_SERVER=
-$(GOENV) go build -o $(SERVER_LATEST) ./src/proj2/server
-cp $(SERVER_LATEST) $(SERVER_VERFILE)
+$(GOENV) go build -o $(SERVER_VERFILE) ./src/proj2/server
+ln -sf $(CURDIR)/$(SERVER_VERFILE) $(SERVER_LATEST)
 endef
 define BUILD_CLIENT=
-$(GOENV) go build -o $(CLIENT_LATEST) ./src/proj2/client
-cp $(CLIENT_LATEST) $(CLIENT_VERFILE)
+$(GOENV) go build -o $(CLIENT_VERFILE) ./src/proj2/client
+ln -sf $(CURDIR)/$(CLIENT_VERFILE) $(CLIENT_LATEST)
 endef
 
 # build server (always rebuild since no easy way to check all deps)
