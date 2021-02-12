@@ -12,3 +12,6 @@ bin/
 
 # go built packages
 pkg
+
+# logfiles
+logs/*.log
