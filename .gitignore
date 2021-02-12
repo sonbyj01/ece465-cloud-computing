@@ -21,3 +21,9 @@
 .idea
 
 pkg
+
+# log files
+logs/
+
+# other Go binaries (e.g., godoc)
+bin/
