@@ -7,7 +7,7 @@ $ go build ./src/proj2/client
 ```
 
 ```bash
-$ ./server --config config.node
+$ ./server --config config.nodes
 $ ./client --intf enps025 --port 5000
 ```
 

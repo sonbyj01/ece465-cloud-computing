@@ -6,15 +6,15 @@ import (
 	"net"
 )
 
-var allClients map[*Client] int
+//var AllClients map[*Client] int
+var AllClients = make(map[*Client]int)
 
 type Client struct {
-	// incoming chan string
-	outgoing 	chan 	string
-	reader		*bufio.Reader 
-	writer 		*bufio.Writer 
-	conn		net.Conn 
-	connection 	*Client
+	outgoing   chan 	string
+	reader     *bufio.Reader
+	writer     *bufio.Writer
+	conn       net.Conn
+	Connection *Client
 }
 
 func (client *Client) Read() {
@@ -22,8 +22,8 @@ func (client *Client) Read() {
 		line, err := client.reader.ReadString('\n')
 
 		if err == nil {
-			if client.connection != nil {
-				client.connection.outgoing <- line 
+			if client.Connection != nil {
+				client.Connection.outgoing <- line
 			}
 			fmt.Println(err)
 		} else {
@@ -32,10 +32,10 @@ func (client *Client) Read() {
 	}
 
 	client.conn.Close()
-	delete(allClients, client)
+	delete(AllClients, client)
 	
-	if client.connection != nil {
-		client.connection.connection = nil
+	if client.Connection != nil {
+		client.Connection.Connection = nil
 	}
 	client = nil
 }

@@ -14,10 +14,9 @@ We chose to focus on the graph coloring algorithm for projects 1 and 2.
 - Project 2: Graph coloring in a multi-node, multithreaded environment 
 
 ---
-
 ### Build Instructions
 Make sure Golang is installed on your system. The test system (for project 1)
-used `go1.11.6 linux/amd64`.
+used `go1.15.8 linux/amd64`.
 
 From the current directory, run:
 ```bash
