@@ -13,7 +13,7 @@ distributed nodes.
 ---
 
 ### Build Instructions
-Running `make` without a target in the top-level directory (TLD) will
+Running `make` without a target **in the top-level directory of this repo** will
 display a help menu:
 ```text
 $ make
@@ -24,7 +24,7 @@ Usage: make [COMMAND], where COMMAND is one of the following:
         run-client: run client (build if necessary)
         clean: clean built files
 ```
-The first two commands will build target files to [`/target`](../../target).
+The first two commands will build target files to [`target`](../../target).
 Namely, it will build an executable to `target/server_{VERSION}` or
 `target/client_{VERSION}`, as well as a symlink called `target/server_latest`
 or `target/client_latest`. (Note that the versioned executable
@@ -34,7 +34,7 @@ the symlink only exists for convenience.)
 The `run-server` and `run-client` commands invoke `target/server_latest` or
 `target/client_latest` with default parameters. Again, this is for convenience
 and will likely not be the case -- if you need custom parameters, run the
-built executables in the `/target` directory.
+built executables in the `target` directory.
 
 ---
 

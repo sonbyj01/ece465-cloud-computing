@@ -22,4 +22,4 @@ Make sure Golang is installed on your system. The test systems for projects
 1 and 2 use `go1.15.8 linux/amd64` (Debian and Ubuntu).
 
 See the respective README files for build instructions for a specific project.
-All build commands should be run from this (top-level) directory.
+All build commands should be run from this top-level directory of the repo.

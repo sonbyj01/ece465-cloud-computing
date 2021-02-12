@@ -25,33 +25,28 @@ of the algorithms can be found in [Gebremedhin's thesis][gebre].
 
 ---
 
-### Build Instructions
-From the top-level directory (TLD) of the repo, run:
-```bash
-GOPATH=$(pwd) go run src/projX/projX.go
-```
-where `X` is the project number. For more information about each project,
-see the README in `src/projX/` folder.
+### Running Tests/Benchmarks
+All of the results are generated using the `go test` command. The driver for the
+tests and benchmarks are in `proj1_test.go`. The algorithms for this project
+are provided in the `graph`, `graphalgo/sequential`, and `graphalgo/parallel`
+packages.
 
----
-
-### Tests/Benchmarks
-Benchmarks are provided in `src/projX/projX_test.go`. To run tests, execute
-the following from the TLD:
+To run tests, execute the following **from the top-level directory of
+the repo**:
 ```bash
-GOPATH=$(pwd) go test ./src/projX
+GOPATH=$(pwd) go test ./src/proj1
 ```
 To run benchmarks:
 ```bash
-GOPATH=$(pwd) go test -bench=. ./src/projX
+GOPATH=$(pwd) go test -bench=. ./src/proj1
 ```
 To run a specific benchmark, put the name after the `-bench`. For example, to
 run the benchmarks for generating new random graphs in `src/proj1/proj1_test.go`
 (the `BenchmarkNewRandomGraph` and `BenchmarkNewRandomGraphParallel` functions):
 ```bash
-GOPATH=$(pwd) go test -bench=NewRandomGraph* ./src/projX
+GOPATH=$(pwd) go test -bench=NewRandomGraph* ./src/proj1
 ```
-See `src/projX/projX_test.go` for available tests and benchmarks. See the
+See `proj1_test.go` for available tests and benchmarks. See the
 [Golang documentation](https://golang.org/doc/) for more details on the
 build/run environment.
 
