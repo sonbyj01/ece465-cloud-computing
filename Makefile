@@ -2,16 +2,7 @@
 # @author Jonathan Lam <jlam55555@gmail.com>
 # @author Henry Son <sonbyj01@gmail.com>
 
-<<<<<<< HEAD
-run-client1:
-	go build ./src/proj2/client
-	./client -port 8007 -config config.nodes
-
-run-client2:
-	./client -port 8008
-=======
 ### CONFIGURABLE VARIABLES
->>>>>>> fdfd2121ad95367cac2275a3e95b3a098651c397
 
 # server vars
 SERVER_BIN=server
@@ -19,7 +10,7 @@ SERVER_FLAGS=-config config.nodes
 
 # client vars
 CLIENT_BIN=client
-CLIENT_FLAGS=-port 8007
+CLIENT_FLAGS=-port 8007 -config config.nodes
 
 # build directory
 OUTDIR=./target

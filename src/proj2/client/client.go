@@ -41,9 +41,9 @@ func main() {
 	wg.Add(1)
 	go graphnet.ListenConnections(port, &wg)
 
-	fmt.Println("Establishing")
-	wg.Add(1)
-	go graphnet.EstablishConnections(addresses, *port, &wg)
+	//fmt.Println("Establishing")
+	//wg.Add(1)
+	//go graphnet.EstablishConnections(addresses, *port, &wg)
 
 	wg.Wait()
 

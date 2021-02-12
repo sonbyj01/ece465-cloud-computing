@@ -4,10 +4,10 @@ package graphnet
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/gob"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,18 +33,34 @@ type Node struct {
 }
 
 // Read will continuously be looking for an input from the socket connection and print it out
+// https://dchua.com/2017/06/23/sending-your-structs-across-the-wire-(tcp-connection)/
 func (node *Node) Read() {
+	defer node.Conn.Close()
+	tmp := make([]byte, 500)
 	for {
 		fmt.Println("Reading...")
-		line, err := node.Reader.ReadString('\n')
-		fmt.Println(line)
-		if err == nil {
-			if node.Connection != nil {
-				node.Connection.Outgoing <- line
-			}
-		} else {
-			break
-		}
+		tmpbuff := bytes.NewBuffer(tmp)
+		tmpstruct := new(VertexMessage)
+
+		dec := gob.NewDecoder(tmpbuff)
+		dec.Decode(tmpstruct)
+		fmt.Println(tmpstruct)
+
+		//var msg VertexMessage
+		//dec := gob.NewDecoder(node.Conn)
+		//dec.Decode(&msg)
+		//fmt.Println(msg)
+
+		//fmt.Println("Reading...")
+		//line, err := node.Reader.ReadString('\n')
+		//fmt.Println(line)
+		//if err == nil {
+		//	if node.Connection != nil {
+		//		node.Connection.Outgoing <- line
+		//	}
+		//} else {
+		//	break
+		//}
 	}
 	node.Conn.Close()
 	if node.Connection != nil {
@@ -55,13 +71,23 @@ func (node *Node) Read() {
 
 // Write will continuously be looking for an input to print out to the socket connection
 func (node *Node) Write() {
+	// --- Test ---
+	vertexData := make([]VertexData, 10)
+
+	msg := VertexMessage{
+		Data:	vertexData,
+	}
+
+	node.sendVertexMessage(msg)
+	// --- Test ---
 	for {
 		fmt.Println("Writing...")
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Text to send: ")
-		input, _ := reader.ReadString('\n')
-		node.Writer.WriteString(input)
-		node.Writer.Flush()
+		//reader := bufio.NewReader(os.Stdin)
+		//fmt.Print("Text to send: ")
+		//input, _ := reader.ReadString('\n')
+		//node.Writer.WriteString(input)
+		//node.Writer.Flush()
+
 	}
 	//for data := range node.Outgoing {
 	//	node.Writer.WriteString(data)
@@ -79,7 +105,7 @@ func ListenConnections(port *int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	fmt.Println("Listening on port", *port, " ...")
-	listener, err := net.Listen("tcp", "localhost:"+strconv.Itoa(*port))
+	listener, err := net.Listen("tcp", "0.0.0.0:"+strconv.Itoa(*port))
 	if err != nil {
 		panic(err)
 	}
@@ -150,21 +176,16 @@ func NewNode(connection net.Conn) *Node {
 		Reader: 	reader,
 		Writer:		writer,
 	}
-
-	var msg VertexMessage
-	defer node.Conn.Close()
-	dec := gob.NewDecoder(node.Conn)
-	dec.Decode(&msg)
-	fmt.Println(msg)
-	//node.Listen()
+	node.Listen()
 	return node
 }
 
 func (node *Node) sendVertexMessage(msg VertexMessage) {
-	// TODO: implement this
 	defer node.Conn.Close()
-	enc := gob.NewEncoder(node.Conn)
+	bin_buf := new(bytes.Buffer)
+	enc := gob.NewEncoder(bin_buf)
 	enc.Encode(msg)
+	node.Conn.Write(bin_buf.Bytes())
 }
 
 func (node *Node) getVertexChannel() chan VertexMessage {
