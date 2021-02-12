@@ -18,5 +18,5 @@ type VertexData struct {
 
 type VertexMessage struct {
 	Type VertexMessageType
-	Data []VertexData
+	Data VertexData
 }

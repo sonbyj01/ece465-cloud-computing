@@ -9,11 +9,11 @@ type Node struct {
 	port   int
 }
 
-func (node *Node) sendVertexMessage(msg VertexMessage) {
+func (node *Node) SendVertexMessage(msg VertexMessage) {
 	// TODO: implement this
 }
 
-func (node *Node) getVertexChannel() chan VertexMessage {
+func (node *Node) GetVertexChannel() chan VertexMessage {
 	// TODO: implement this
 	bufSize := 64
 	return make(chan VertexMessage, bufSize);
