@@ -4,8 +4,9 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"net"
+	"graphnet"
 	"os"
+	"sync"
 )
 
 func check(e error) {
@@ -38,24 +39,11 @@ func main() {
 
 	// establish a connection with each node from configuration file
 	// https://dev.to/alicewilliamstech/getting-started-with-sockets-in-golang-2j66
-	for _, address := range addresses {
-		fmt.Println("Establishing connection with ", address, " ...")
-		conn, err := net.Dial("tcp", address)
-		if err != nil {
-			panic(err)
-		}
-
-		reader := bufio.NewReader(os.Stdin)
-
-		for {
-			fmt.Print("Text to send: ")
-			input, _ := reader.ReadString('\n')	// request
-			fmt.Fprintf(conn, input)
-			fmt.Println(input)
-			//message, _ := bufio.NewReader(conn).ReadString('\n') // response
-			//fmt.Println("Server relay: ", message)
-		}
-	}
+	var wg sync.WaitGroup
+	fmt.Println("Establishing")
+	wg.Add(1)
+	go graphnet.EstablishConnections(addresses, 0, &wg)
+	wg.Wait()
 
 	// start coloring
 	//distributed.ColorDistributedServer()

@@ -2,9 +2,12 @@ run-server:
 	go build ./src/proj2/server
 	./server -config config.nodes
 
-run-client:
+run-client1:
 	go build ./src/proj2/client
-	./client -intf ens33 -port 8007
+	./client -port 8007 -config config.nodes
+
+run-client2:
+	./client -port 8008
 
 clean:
 	rm -rf server client
