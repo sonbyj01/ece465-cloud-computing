@@ -26,8 +26,34 @@ of the algorithms can be found in [Gebremedhin's thesis][gebre].
 ---
 
 ### Build Instructions
+From the top-level directory (TLD) of the repo, run:
+```bash
+GOPATH=$(pwd) go run src/projX/projX.go
+```
+where `X` is the project number. For more information about each project,
+see the README in `src/projX/` folder.
 
-See [the parent README](../../README.md).
+---
+
+### Tests/Benchmarks
+Benchmarks are provided in `src/projX/projX_test.go`. To run tests, execute
+the following from the TLD:
+```bash
+GOPATH=$(pwd) go test ./src/projX
+```
+To run benchmarks:
+```bash
+GOPATH=$(pwd) go test -bench=. ./src/projX
+```
+To run a specific benchmark, put the name after the `-bench`. For example, to
+run the benchmarks for generating new random graphs in `src/proj1/proj1_test.go`
+(the `BenchmarkNewRandomGraph` and `BenchmarkNewRandomGraphParallel` functions):
+```bash
+GOPATH=$(pwd) go test -bench=NewRandomGraph* ./src/projX
+```
+See `src/projX/projX_test.go` for available tests and benchmarks. See the
+[Golang documentation](https://golang.org/doc/) for more details on the
+build/run environment.
 
 ---
 

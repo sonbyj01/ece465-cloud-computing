@@ -13,9 +13,8 @@ distributed nodes.
 ---
 
 ### Build Instructions
-The top-level [Makefile](../../Makefile) has several instructions to build
-the executables and run defaults. Running `make` (without a target) in the
-terminal will provide some aid:
+Running `make` without a target in the top-level directory (TLD) will
+display a help menu:
 ```text
 $ make
 Usage: make [COMMAND], where COMMAND is one of the following:
