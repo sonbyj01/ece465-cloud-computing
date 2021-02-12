@@ -6,9 +6,16 @@ import (
 	"net"
 )
 
-//var AllClients map[*Client] int
-var AllClients = make(map[*Client]int)
+// ConnPool keeps track of all connections in an array; they are initially
+// dumped in the unregistered list and moved to the correct index in the
+// registered array when their index is received
+type ConnPool struct {
+	unregistered []*Client
+	registered   []*Client
+}
 
+// Client is a struct to keep track of a single connection from this node
+// to another node
 type Client struct {
 	outgoing   chan 	string
 	reader     *bufio.Reader
@@ -32,7 +39,7 @@ func (client *Client) Read() {
 	}
 
 	client.conn.Close()
-	delete(AllClients, client)
+	//delete(AllClients, client)
 	
 	if client.Connection != nil {
 		client.Connection.Connection = nil

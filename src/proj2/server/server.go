@@ -3,58 +3,78 @@ package main
 import (
 	"bufio"
 	"flag"
-	"fmt"
+	"graphnet"
 	"net"
 	"os"
+	"proj2/common"
 )
-
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
 
 // main is the driver to be built into the executable for the server
 func main() {
+	// create logger
+	logger, logFile := common.CreateLogger("server")
+	defer func() {
+		err := logFile.Close()
+		if err != nil {
+			logger.Fatal(err)
+		}
+	}()
+
 	// Takes in command line flag(s)
-	// https://stackoverflow.com/questions/45117892/passing-cli-arguments-to-excutables-with-go-run
+	// https://stackoverflow.com/questions/45117892
 	// https://gobyexample.com/command-line-flags
-	configFile := flag.String("config", "", "File name that contains the node configurations")
+	configFile := flag.String("config", "",
+		"File containing the node configurations")
 	flag.Parse()
 	if *configFile == "" {
-		panic("No configuration file.")
+		logger.Fatal("No configuration file.")
 	}
 
 	// read node configuration file
-	// https://stackoverflow.com/questions/8757389/reading-a-file-line-by-line-in-go/16615559#16615559
+	// https://stackoverflow.com/questions/8757389
 	file, err := os.Open(*configFile)
-	check(err)
+	if err != nil {
+		logger.Fatal(err)
+	}
 	fileScanner := bufio.NewScanner(file)
 	addresses := make([]string, 0)
 	for fileScanner.Scan() {
-		fmt.Println("Config: ", fileScanner.Text())
+		logger.Printf("Reading config: %s\n", fileScanner.Text())
 		addresses = append(addresses, fileScanner.Text())
 	}
 
 	// establish a connection with each node from configuration file
 	// https://dev.to/alicewilliamstech/getting-started-with-sockets-in-golang-2j66
-	for _, address := range addresses {
-		fmt.Println("Establishing connection with ", address, " ...")
+	for i, address := range addresses {
+		logger.Printf("Establishing connection with %s...\n", address)
 		conn, err := net.Dial("tcp", address)
 		if err != nil {
-			panic(err)
+			logger.Fatal(err)
 		}
 
-		reader := bufio.NewReader(os.Stdin)
+		logger.Printf("Connection established with %s.\n", address)
 
-		for {
-			fmt.Print("Text to send: ")
-			input, _ := reader.ReadString('\n')	// request
-			fmt.Fprintf(conn, input)
-			fmt.Println(input)
-			//message, _ := bufio.NewReader(conn).ReadString('\n') // response
-			//fmt.Println("Server relay: ", message)
+		client := graphnet.NewClient(conn)
+
+		// send information about other nodes to this node
+		for j := range addresses {
+			if i == j {
+				continue
+			}
+
+
 		}
+
+		//reader := bufio.NewReader(os.Stdin)
+		//
+		//for {
+		//	fmt.Print("Text to send: ")
+		//	input, _ := reader.ReadString('\n')	// request
+		//	fmt.Fprintf(conn, input)
+		//	fmt.Println(input)
+		//	//message, _ := bufio.NewReader(conn).ReadString('\n') // response
+		//	//fmt.Println("Server relay: ", message)
+		//}
 	}
 
 	// start coloring

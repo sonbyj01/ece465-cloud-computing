@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"graphnet"
 	"net"
+	"proj2/common"
 	"strconv"
 )
 
@@ -26,39 +27,54 @@ func handleConnection(conn net.Conn) {
 
 // main is the driver to be built into the executable for the client
 func main() {
-	networkInterface := flag.String("intf", "", "File name that contains the node configurations")
-	port := flag.Int("port", 0, "Listening port number")
+	logger, logFile := common.CreateLogger("client")
+	defer func() {
+		err := logFile.Close()
+		if err != nil {
+			logger.Fatal(err)
+		}
+	}()
+
+	// get port number to listen on
+	port := flag.Int("port", 0, "Port to listen on")
 	flag.Parse()
-	if *networkInterface == "" {
-		panic("No interface specified")
-	}
 	if *port == 0 {
 		panic("No port specified")
 	}
 
-	fmt.Println("Listening on port ", *port, " ...")
+	// begin listening for incoming connections
+	logger.Printf("Listening on port %d...", *port)
 	listener, err := net.Listen("tcp", "localhost:"+strconv.Itoa(*port))
 	if err != nil {
-		panic(err)
+		logger.Fatal(err)
 	}
-	defer listener.Close()
+	defer func() {
+		err := listener.Close()
+		if err != nil {
+			logger.Fatal(err)
+		}
+	}()
 
+	// initialize array of connections
 	allNodes := make(map[*graphnet.Node]int)
 
+	// listen for connections from others
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println(err.Error())
+			logger.Fatal(err)
 		}
-		node := graphnet.NewNode(conn)
-		for nodeList, _ := range allNodes {
-			if nodeList.Connection == nil {
-				node.Connection = nodeList
-				nodeList.Connection = node
-				fmt.Println("Connected")
-			}
-		}
-		allNodes[node] = 1
+
+		client := graphnet.NewClient(conn)
+		//node := graphnet.NewNode(conn)
+		//for nodeList, _ := range allNodes {
+		//	if nodeList.Connection == nil {
+		//		node.Connection = nodeList
+		//		nodeList.Connection = node
+		//		fmt.Println("Connected")
+		//	}
+		//}
+		//allNodes[node] = 1
 	}
 
 	// start coloring
