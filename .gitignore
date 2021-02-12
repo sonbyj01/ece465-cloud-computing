@@ -1,6 +1,9 @@
 # binaries
 target/
 
+# other go binaries (e.g., godoc)
+bin/
+
 # ViM swapfiles
 **/.*.swp
 
