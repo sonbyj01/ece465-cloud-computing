@@ -36,15 +36,7 @@ func (ncp *NodeConnPool) Register() {
 
 // Dispatch tells the Read function how many bytes to read and what to do with
 // the bytes
-type Dispatch struct {
-	numBytes int
-	callback func([]byte)
-}
-
-// NewDispatch creates a new dispatch
-func NewDispatch(numBytes int, callback func([]byte)) Dispatch {
-	return Dispatch{numBytes, callback}
-}
+type Dispatch func([]byte)
 
 // NodeConn is a struct to keep track of a single connection from this node
 // to another node
@@ -69,16 +61,15 @@ func (conn *NodeConn) Read() {
 		}
 
 		// look up action in dispatch table
-		dispatch := conn.dispatchTab[b]
-		buf := make([]byte, dispatch.numBytes)
+		buf := make([]byte, NUM_BYTES_MAP[b])
 		n, err := io.ReadFull(conn.reader, buf)
-		if n != dispatch.numBytes || err != nil {
+		if n != NUM_BYTES_MAP[b] || err != nil {
 			conn.logger.Println(err)
 			break
 		}
 
 		// dispatch action
-		go dispatch.callback(buf)
+		go conn.dispatchTab[b](buf)
 	}
 
 	err := conn.conn.Close()

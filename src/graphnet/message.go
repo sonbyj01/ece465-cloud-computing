@@ -21,6 +21,16 @@ const (
 	MSG_HANDSHAKE_DONE		= byte(iota)
 )
 
+// mapping each message type to its number of bytes
+var NUM_BYTES_MAP = map[byte]int{
+	MSG_VERTEX_INFO: 0,
+	MSG_NODE_FINISHED: 0,
+	MSG_NODE_ROUND_FINISHED: 0,
+	MSG_NODE_INDEX_COUNT: 0,
+	MSG_NODE_IP: 0,
+	MSG_HANDSHAKE_DONE: 0,
+}
+
 type VertexData struct {
 	Vertices []int
 	Colors   []int16
