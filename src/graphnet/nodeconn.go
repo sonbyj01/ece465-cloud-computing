@@ -10,32 +10,75 @@ import (
 // NodeConnPool keeps track of all node connections in an array; they are
 // initially dumped in the unregistered list and moved to the correct index in
 // the registered array when their index is received
-type NodeConnPool []*NodeConn
+type NodeConnPool struct {
+	Conns      []*NodeConn
+	Index      int
+	registered bool
+}
 
 // NewNodeConnPool generates a NodeConnPool (array of NodeConn)
 func NewNodeConnPool() NodeConnPool {
-	return make(NodeConnPool, 0)
+	return NodeConnPool{}
 }
 
 // AddUnregistered adds a NodeConn to the nodeConnPool
 func (ncp *NodeConnPool) AddUnregistered(conn *NodeConn) {
-	*ncp = append(*ncp, conn)
+	ncp.Conns = append(ncp.Conns, conn)
 }
 
 // Register reorganizes the NodeConn structs into their proper index
 // after they have all received their indices
 func (ncp *NodeConnPool) Register() {
-	orderedPool := make(NodeConnPool, len(*ncp)+1)
+	orderedPool := make([]*NodeConn, len(ncp.Conns)+1)
+	var index int
 
-	for _, conn := range *ncp {
+	for _, conn := range ncp.Conns {
 		orderedPool[conn.Index] = conn
 	}
 
-	*ncp = orderedPool
+	for i, conn := range orderedPool {
+		if conn == nil {
+			index = i
+			break
+		}
+	}
+
+	ncp.Conns = orderedPool
+	ncp.Index = index
+	ncp.registered = true
 }
 
-// Dispatch tells the Read function how many bytes to read and what to do with
-// the bytes
+// Broadcast sends a message to all other nodes
+func (ncp *NodeConnPool) Broadcast(msgType byte, buf []byte) {
+	// ncp should be registered first, i.e., indices should be correct
+	if !ncp.registered {
+		panic("Unregistered NodeConnPool")
+	}
+
+	for i, nodeConn := range ncp.Conns {
+		if i != ncp.Index {
+			nodeConn.WriteBytes(msgType, buf)
+		}
+	}
+}
+
+// BroadcastWorkers sends a message to all (other) worker nodes
+func (ncp *NodeConnPool) BroadcastWorkers(msgType byte, buf []byte) {
+	// ncp should be registered first, i.e., indices should be correct
+	if !ncp.registered {
+		panic("Unregistered NodeConnPool")
+	}
+
+	for i, nodeConn := range ncp.Conns {
+		if i != ncp.Index && i > 0 {
+			nodeConn.WriteBytes(msgType, buf)
+		}
+	}
+}
+
+// Dispatch is a callback that takes a fixed-length slice of bytes, and is
+// associated with a particular message type. The length of the slice of bytes
+// is defined in graphnet.NUM_BYTES_MAP
 type Dispatch func([]byte)
 
 // NodeConn is a struct to keep track of a single connection from this node

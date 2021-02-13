@@ -77,7 +77,7 @@ func main() {
 
 	// send information about all nodes to each node
 	buf := make([]byte, 7)
-	for i, nodeConn := range ncp {
+	for i, nodeConn := range ncp.Conns {
 		// send node index and count to worker
 		buf[0] = byte(i+1)
 		buf[1] = byte(nWorkers+1)

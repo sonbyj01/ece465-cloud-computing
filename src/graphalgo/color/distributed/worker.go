@@ -7,25 +7,6 @@ import (
 	"sync"
 )
 
-// findEdgeVertices returns a boolean array indicating which nodes are on
-// the partition edge
-// TODO: can easily parallelize this over multiple cores on a single node
-// TODO: is this even needed? this is kind of handled automatically
-//func findEdgeVertices(sg *Subgraph) []bool {
-//	edgeVertexMap := make([]bool, len(sg.Vertices))
-//
-//	for i := range sg.Vertices {
-//		for _, j := range sg.Vertices[i].Adj {
-//			if j < sg.iBegin || j >= sg.iEnd {
-//				edgeVertexMap[j] = true
-//				break
-//			}
-//		}
-//	}
-//
-//	return edgeVertexMap
-//}
-
 // colorSpeculative speculatively colors one group of vertices and notifies
 // other nodes when their neighbors are updated
 func colorSpeculative(u []int, maxColor int, sg *Subgraph,
@@ -108,7 +89,6 @@ func resolveConflicts(u []int, sg *Subgraph, r *[]int, wg *sync.WaitGroup) {
 func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
 	maxColor, nThreads int, logger *log.Logger) {
 
-	//edgeVertexMap := findEdgeVertices(sg)
 	var wg sync.WaitGroup
 	nNodes := len(nodes)
 
@@ -207,9 +187,7 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
 
 	// TODO: when done coloring, notify all nodes
 	ncp := graphnet.NewNodeConnPool()
-	data := make([]byte, 1)
-	data[0] = byte(currentNode.Index)
-	for _, nodeConn := range ncp {
-		nodeConn.WriteBytes(graphnet.MSG_NODE_FINISHED, data)
-	}
+	buf := make([]byte, 1)
+	buf[0] = byte(sg.pos)
+	ncp.Broadcast(graphnet.MSG_NODE_FINISHED, buf)
 }
