@@ -12,8 +12,14 @@ type Subgraph struct {
 }
 
 // sendToNodeCP sends a control message to node n
-func (sg *Subgraph) sendToNodeCP(node *graphnet.Node,
+func (sg *Subgraph) sendControlMessage(node *graphnet.Node,
 	msg graphnet.VertexMessageType) {
 
-	//graphnet.VertexMessage{msg}
+	// TODO: implement this once channels are set up
+}
+
+func (sg *Subgraph) sendVertexData(node *graphnet.Node,
+	data graphnet.VertexData) {
+
+	// TODO: implement this once channels are set up
 }
