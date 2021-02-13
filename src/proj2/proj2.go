@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"graph"
 	"os"
 	"runtime"
@@ -11,10 +12,10 @@ import (
 // the real drivers for Project 2 are in proj2/client and proj2/server.
 func main() {
 	// params for sample graph
-	nVertices := 1000
-	degree := float32(100)
+	nVertices := 10000
+	degree := float32(1000)
 	nThreads := 2 * runtime.NumCPU()
-	outFile := "sample.graph"
+	outFile := fmt.Sprintf("res/sample%d.graph", nVertices)
 
 	// generate some sample graphs for use as testcases
 	g1 := graph.NewRandomGraphParallel(nVertices, degree, nThreads)
