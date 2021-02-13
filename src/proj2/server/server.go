@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"flag"
 	"graphnet"
 	"net"
 	"os"
 	"proj2/common"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -73,16 +76,28 @@ func main() {
 	}
 
 	// send information about all nodes to each node
+	buf := make([]byte, 7)
 	for i, nodeConn := range ncp {
-		// TODO: send node index to node
+		// send node index and count to worker
+		buf[0] = byte(i+1)
+		buf[1] = byte(nWorkers+1)
+		nodeConn.WriteBytes(graphnet.MSG_NODE_INDEX_COUNT, buf[:2])
 
-		// TODO: send total nodes count to node
-
-		// TODO: send addresses of higher indexed nodes to node
+		// send addresses of higher indexed nodes to node
 		for j := i + 1; j < len(addresses); j++ {
+			ipComponents := strings.Split(addresses[j], ":")
+			buf[0] = byte(j+1)
+			copy(buf[1:5], net.ParseIP(ipComponents[0]))
+
+			port, err := strconv.Atoi(ipComponents[1])
+			if err != nil {
+				logger.Fatal(err)
+			}
+			binary.LittleEndian.PutUint16(buf[5:7], uint16(port))
+			nodeConn.WriteBytes(graphnet.MSG_NODE_ADDRESS, buf[:7])
 		}
 
-		// TODO: end packet
+		nodeConn.WriteBytes(graphnet.MSG_HANDSHAKE_DONE, buf[:0])
 	}
 
 	// this shouldn't have any effect for the server, since all nodes were

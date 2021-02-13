@@ -12,7 +12,7 @@ const (
 	// the following message types are for server-worker handshake
 	MSG_NODE_INDEX_COUNT	= byte(iota)	// server notifies a worker node of
 											// total node count and its index
-	MSG_NODE_IP				= byte(iota)	// server notifies a worker node of
+	MSG_NODE_ADDRESS		= byte(iota)	// server notifies a worker node of
 											// another work nodes' address
 	MSG_HANDSHAKE_DONE		= byte(iota)	// server is finished with handshake
 )
@@ -24,7 +24,7 @@ var NUM_BYTES_MAP = map[byte]int{
 	MSG_NODE_ROUND_FINISHED: 1,		// 0: node index
 	MSG_NODE_INDEX_COUNT: 2,		// 0: node index, 1: total nodes
 									// (including server)
-	MSG_NODE_IP: 7,					// 0: node index, 1-4: ipv4 address,
+	MSG_NODE_ADDRESS: 7,			// 0: node index, 1-4: ipv4 address,
 									// 5-6: port
 	MSG_HANDSHAKE_DONE: 0,			// n/a
 }
