@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"proj2/common"
+	"sync"
 )
 
 // main is the driver to be built into the executable for the server
@@ -47,9 +48,17 @@ func main() {
 	// create server dispatch table
 	// TODO: fill with actual handlers
 	dispatchTab := make(map[byte]graphnet.Dispatch)
+
+	var wg sync.WaitGroup
+	nWorkers := len(addresses)
+	wg.Add(nWorkers)
 	dispatchTab[graphnet.MSG_NODE_FINISHED] = graphnet.NewDispatch(
-		10,
-		func([]byte) { },
+		1,
+		func(nodeIndex []byte) {
+			wg.Done()
+			logger.Printf("Node %d has finished processing.\n",
+				nodeIndex[0])
+		},
 	)
 
 	// establish a connection with each node from configuration file
@@ -62,13 +71,14 @@ func main() {
 
 		logger.Printf("Connection established with %s.\n", address)
 		nodeConn := graphnet.NewNodeConn(conn, logger, dispatchTab)
-		nodeConn.SetIndex(i + 1)
+		nodeConn.Index = i + 1
 		ncp.AddUnregistered(nodeConn)
 	}
 
 	// send information about all nodes to each node
 	for i, nodeConn := range ncp {
 		// TODO: send node index to node
+
 
 		// TODO: send total nodes count to node
 

@@ -53,8 +53,8 @@ Sample file for a graph with 3 nodes, with values 1, 2, and -2:
 ```
 
 ##### Node Configuration Files (*.node)
-Each line will contain the address of one slave. This file will be fed to the
-master. (Each slave will also be fed the master's IP address.)
+Each line will contain the address of one worker. This file will be fed to the
+server.
 ```text
 10.0.0.53:5000
 10.0.0.54:5000

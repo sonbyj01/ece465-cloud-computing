@@ -28,7 +28,7 @@ func (ncp *NodeConnPool) Register() {
 	orderedPool := make(NodeConnPool, len(*ncp)+1)
 
 	for _, conn := range *ncp {
-		orderedPool[conn.index] = conn
+		orderedPool[conn.Index] = conn
 	}
 
 	*ncp = orderedPool
@@ -54,7 +54,7 @@ type NodeConn struct {
 	writer      *bufio.Writer
 	conn        net.Conn
 	logger      *log.Logger
-	index       int
+	Index       int
 	dispatchTab map[byte]Dispatch
 }
 
@@ -126,9 +126,12 @@ func (conn *NodeConn) Channel() *chan string {
 	return &conn.channel
 }
 
-// SetIndex sets the connection's node index
-func (conn *NodeConn) SetIndex(index int) {
-	conn.index = index
+// Close closes the NodeConn's connection
+func (conn *NodeConn) Close() {
+	err := conn.conn.Close()
+	if err != nil {
+		conn.logger.Fatal(err)
+	}
 }
 
 // NewNodeConn returns a new node connection object for sending messages

@@ -115,4 +115,10 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
 	}
 
 	// TODO: when done coloring, notify all nodes
+	ncp := graphnet.NewNodeConnPool()
+	data := make([]byte, 1)
+	data[0] = byte(currentNode.Index)
+	for _, nodeConn := range ncp {
+		nodeConn.WriteBytes(graphnet.MSG_NODE_FINISHED, data)
+	}
 }
