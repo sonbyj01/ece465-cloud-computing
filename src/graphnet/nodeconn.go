@@ -36,6 +36,8 @@ func (ncp *NodeConnPool) Register() {
 		orderedPool[conn.Index] = conn
 	}
 
+	// find which index the current node is (i.e., it should be the only
+	// nil connection, all other connections should be properly filled)
 	for i, conn := range orderedPool {
 		if conn == nil {
 			index = i
@@ -48,21 +50,21 @@ func (ncp *NodeConnPool) Register() {
 	ncp.registered = true
 }
 
-// Broadcast sends a message to all other nodes
+// Broadcast sends a message to all other (active) nodes
 func (ncp *NodeConnPool) Broadcast(msgType byte, buf []byte) {
 	// ncp should be registered first, i.e., indices should be correct
 	if !ncp.registered {
 		panic("Unregistered NodeConnPool")
 	}
 
-	for i, nodeConn := range ncp.Conns {
-		if i != ncp.Index {
+	for _, nodeConn := range ncp.Conns {
+		if nodeConn != nil {
 			nodeConn.WriteBytes(msgType, buf)
 		}
 	}
 }
 
-// BroadcastWorkers sends a message to all (other) worker nodes
+// BroadcastWorkers sends a message to all (other) (active) worker nodes
 func (ncp *NodeConnPool) BroadcastWorkers(msgType byte, buf []byte) {
 	// ncp should be registered first, i.e., indices should be correct
 	if !ncp.registered {
@@ -70,10 +72,22 @@ func (ncp *NodeConnPool) BroadcastWorkers(msgType byte, buf []byte) {
 	}
 
 	for i, nodeConn := range ncp.Conns {
-		if i != ncp.Index && i > 0 {
+		if nodeConn != nil && i > 0 {
 			nodeConn.WriteBytes(msgType, buf)
 		}
 	}
+}
+
+// Remove removes a node
+func (ncp *NodeConnPool) Remove(nodeIndex int) {
+	// ncp should be registered first, i.e., indices should be correct
+	if !ncp.registered {
+		panic("Unregistered NodeConnPool")
+	}
+
+	// close connection
+	ncp.Conns[nodeIndex].Close()
+	ncp.Conns[nodeIndex] = nil
 }
 
 // Dispatch is a callback that takes a fixed-length slice of bytes, and is
@@ -84,13 +98,13 @@ type Dispatch func([]byte, *NodeConn)
 // NodeConn is a struct to keep track of a single connection from this node
 // to another node
 type NodeConn struct {
-	channel     chan string
 	reader      *bufio.Reader
 	writer      *bufio.Writer
 	conn        net.Conn
 	logger      *log.Logger
 	Index       int
 	dispatchTab map[byte]Dispatch
+	open		bool
 }
 
 // Read listens on the connection's socket and outputs messages to the
@@ -98,47 +112,34 @@ type NodeConn struct {
 func (conn *NodeConn) Read() {
 	for {
 		b, err := conn.reader.ReadByte()
-		if err != nil {
-			conn.logger.Println(err)
+		if err == io.EOF {
 			break
+		} else if err != nil {
+			conn.logger.Fatal(err)
 		}
 
 		// look up action in dispatch table
 		buf := make([]byte, NUM_BYTES_MAP[b])
 		n, err := io.ReadFull(conn.reader, buf)
-		if n != NUM_BYTES_MAP[b] || err != nil {
-			conn.logger.Println(err)
+		if err == io.EOF {
 			break
+		} else if n != NUM_BYTES_MAP[b] || err != nil {
+			conn.logger.Fatal(err)
 		}
 
 		// dispatch action
 		go conn.dispatchTab[b](buf, conn)
 	}
 
-	err := conn.conn.Close()
-	if err != nil {
-		conn.logger.Fatal(err)
-	}
+	conn.Close()
 }
-
-// TODO: remove
-// Write sends messages sent to the channel over the network socket
-//func (conn *NodeConn) Write() {
-//	for data := range conn.channel {
-//		_, err := conn.writer.WriteString(data)
-//		if err != nil {
-//			conn.logger.Fatal(err)
-//		}
-//
-//		err = conn.writer.Flush()
-//		if err != nil {
-//			conn.logger.Fatal(err)
-//		}
-//	}
-//}
 
 // WriteBytes allows you to write messages directly to the socket
 func (conn *NodeConn) WriteBytes(messageType byte, buffer []byte) {
+	if !conn.open {
+		return
+	}
+
 	err := conn.writer.WriteByte(messageType)
 	if err != nil {
 		conn.logger.Fatal(err)
@@ -155,17 +156,17 @@ func (conn *NodeConn) WriteBytes(messageType byte, buffer []byte) {
 	}
 }
 
-// Channel is a getter for a connection's channel
-func (conn *NodeConn) Channel() *chan string {
-	return &conn.channel
-}
-
 // Close closes the NodeConn's connection
 func (conn *NodeConn) Close() {
+	if !conn.open {
+		return
+	}
+
 	err := conn.conn.Close()
 	if err != nil {
 		conn.logger.Fatal(err)
 	}
+	conn.open = false
 }
 
 // NewNodeConn returns a new node connection object for sending messages
@@ -173,21 +174,17 @@ func (conn *NodeConn) Close() {
 func NewNodeConn(conn net.Conn, logger *log.Logger,
 	dispatchTab map[byte]Dispatch) *NodeConn {
 
-	writer := bufio.NewWriter(conn)
-	reader := bufio.NewReader(conn)
-
 	nodeConn := &NodeConn{
-		channel:     make(chan string),
 		conn:        conn,
-		reader:      reader,
-		writer:      writer,
+		reader:      bufio.NewReader(conn),
+		writer:      bufio.NewWriter(conn),
 		logger:      logger,
 		dispatchTab: dispatchTab,
+		open:        true,
 	}
 
-	// begin listening for reading and writing
+	// begin listening for reading
 	go nodeConn.Read()
-	//go nodeConn.Write()
 
 	return nodeConn
 }

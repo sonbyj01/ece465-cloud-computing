@@ -174,4 +174,6 @@ func main() {
 	buf := make([]byte, 1)
 	buf[0] = byte(ws.NodeIndex)
 	ws.ConnPool.Broadcast(graphnet.MSG_NODE_FINISHED, buf)
+
+	logger.Printf("Done.")
 }
