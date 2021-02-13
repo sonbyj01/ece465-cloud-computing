@@ -2,88 +2,33 @@ package main
 
 import (
 	"bufio"
-	"fmt"
-	"net"
+	"graph"
+	"os"
+	"runtime"
 )
 
-var allClients map[*Client]int
-
-type Client struct {
-	// incoming chan string
-	outgoing   chan string
-	reader     *bufio.Reader
-	writer     *bufio.Writer
-	conn       net.Conn
-	connection *Client
-}
-
-func (client *Client) Read() {
-	for {
-		line, err := client.reader.ReadString('\n')
-		if err == nil {
-			if client.connection != nil {
-				client.connection.outgoing <- line
-			}
-			fmt.Println(line)
-		} else {
-			break
-		}
-
-	}
-
-	client.conn.Close()
-	delete(allClients, client)
-	if client.connection != nil {
-		client.connection.connection = nil
-	}
-	client = nil
-}
-
-func (client *Client) Write() {
-	for data := range client.outgoing {
-		client.writer.WriteString(data)
-		client.writer.Flush()
-	}
-}
-
-func (client *Client) Listen() {
-	go client.Read()
-	go client.Write()
-}
-
-func NewClient(connection net.Conn) *Client {
-	writer := bufio.NewWriter(connection)
-	reader := bufio.NewReader(connection)
-
-	client := &Client{
-		// incoming: make(chan string),
-		outgoing: make(chan string),
-		conn:     connection,
-		reader:   reader,
-		writer:   writer,
-	}
-	client.Listen()
-
-	return client
-}
-
+// main is just for scratch work or for generating sample graphs
+// the real drivers for Project 2 are in proj2/client and proj2/server.
 func main() {
-	allClients = make(map[*Client]int)
-	listener, _ := net.Listen("tcp", ":8080")
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		client := NewClient(conn)
-		for clientList, _ := range allClients {
-			if clientList.connection == nil {
-				client.connection = clientList
-				clientList.connection = client
-				fmt.Println("Connected")
-			}
-		}
-		allClients[client] = 1
-		fmt.Println(len(allClients))
+	// params for sample graph
+	nVertices := 1000
+	degree := float32(100)
+	nThreads := 2 * runtime.NumCPU()
+	outFile := "sample.graph"
+
+	// generate some sample graphs for use as testcases
+	g1 := graph.NewRandomGraphParallel(nVertices, degree, nThreads)
+
+	// write file
+	file, err := os.OpenFile(outFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
+		0666)
+	if err != nil {
+		panic(err)
+	}
+
+	// dump
+	err = g1.Dump(bufio.NewWriter(file))
+	if err != nil {
+		panic(err)
 	}
 }

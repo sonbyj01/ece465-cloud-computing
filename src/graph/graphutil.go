@@ -73,15 +73,17 @@ func Load(reader io.Reader) (*Graph, error) {
 
 // Dump writes a graph to file
 func (g *Graph) Dump(writer io.Writer) error {
+	// write number of vertices
 	_, err := io.WriteString(writer, strconv.Itoa(len(g.Vertices)) + "\n")
 	if err != nil {
 		return err
 	}
 
+	// write each vertex
 	for i := range g.Vertices {
 		v := &g.Vertices[i]
 		s := strconv.Itoa(v.Value) + ";"
-		for j := range v.Adj {
+		for _, j := range v.Adj {
 			s += strconv.Itoa(j) + ","
 		}
 		_, err = io.WriteString(writer, s[:len(s)-1] + "\n")
