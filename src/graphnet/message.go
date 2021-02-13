@@ -9,26 +9,24 @@ const (
 	MSG_NODE_ROUND_FINISHED = byte(iota)
 
 
-	// Following message types are for server-worker handshake
-
-	// server notifies a worker node of total number of nodes and its index
-	MSG_NODE_INDEX_COUNT	= byte(iota)
-
-	// server notifies a worker node of another work nodes' address
-	MSG_NODE_IP				= byte(iota)
-
-	// server is finished with handshake
-	MSG_HANDSHAKE_DONE		= byte(iota)
+	// the following message types are for server-worker handshake
+	MSG_NODE_INDEX_COUNT	= byte(iota)	// server notifies a worker node of
+											// total node count and its index
+	MSG_NODE_IP				= byte(iota)	// server notifies a worker node of
+											// another work nodes' address
+	MSG_HANDSHAKE_DONE		= byte(iota)	// server is finished with handshake
 )
 
 // mapping each message type to its number of bytes
 var NUM_BYTES_MAP = map[byte]int{
-	MSG_VERTEX_INFO: 0,
-	MSG_NODE_FINISHED: 0,
-	MSG_NODE_ROUND_FINISHED: 0,
-	MSG_NODE_INDEX_COUNT: 0,
-	MSG_NODE_IP: 0,
-	MSG_HANDSHAKE_DONE: 0,
+	MSG_VERTEX_INFO: 8,				// 0-3: color, 4-7: index
+	MSG_NODE_FINISHED: 1,			// 0: node index
+	MSG_NODE_ROUND_FINISHED: 1,		// 0: node index
+	MSG_NODE_INDEX_COUNT: 2,		// 0: node index, 1: total nodes
+									// (including server)
+	MSG_NODE_IP: 7,					// 0: node index, 1-4: ipv4 address,
+									// 5-6: port
+	MSG_HANDSHAKE_DONE: 0,			// n/a
 }
 
 type VertexData struct {
