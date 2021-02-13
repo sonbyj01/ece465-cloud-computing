@@ -93,6 +93,7 @@ func main() {
 		for j := i + 1; j < len(addresses); j++ {
 			ipComponents := strings.Split(addresses[j], ":")
 			buf[0] = byte(j+1)
+
 			copy(buf[1:5], net.ParseIP(ipComponents[0]))
 
 			port, err := strconv.Atoi(ipComponents[1])

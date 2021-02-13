@@ -43,10 +43,7 @@ func main() {
 	}()
 
 	// this stores algorithm state
-	state := distributed.WorkerState{}
-
-	// create node connection pool
-	ncp := graphnet.NewNodeConnPool()
+	var ws distributed.WorkerState
 
 	// waitgroup to wait on getting node index
 	var nodeIndexWg sync.WaitGroup
@@ -90,13 +87,14 @@ func main() {
 
 		logger.Printf("Got node index %d, %d total nodes.",
 			indexCount[0], indexCount[1])
-		state.NodeIndex = int(indexCount[0])
-		state.NodeCount = int(indexCount[1])
+		ws.NodeIndex = int(indexCount[0])
+		ws.NodeCount = int(indexCount[1])
 
-		// receive incoming connections from lower-indexed nodes
-		// add two items to the waitgroup per node: one for the initial
-		// connection, one for the extra message indicating which node it is
-		setupWg.Add(2 * (state.NodeIndex-1))
+		// add number of tasks: expect two connections from each lower node
+		// (nodeIndex-1 times) as well as one connection to each higher node
+		// (nodeCount-nodeIndex-1 times)
+		setupWg.Add(2*(ws.NodeIndex-1) +
+			ws.NodeCount - ws.NodeIndex - 1)
 
 		// set index of server to 0
 		nodeConn.Index = 0
@@ -106,23 +104,27 @@ func main() {
 	dispatchTab[graphnet.MSG_NODE_ADDRESS] = func(ip []byte,
 		_ *graphnet.NodeConn) {
 
-		logger.Printf("Node %d has IP of %d.%d.%d.%d and port of %d",
-			ip[0], ip[1], ip[2], ip[3], ip[4], ip[5:])
+		defer setupWg.Done()
+
 		ipv4 := net.IP(ip[1:5]).String()
 		port := strconv.Itoa(int(binary.LittleEndian.Uint16(ip[5:])))
+
+		logger.Printf("Node %d has address of %s:%s\n",
+			ip[0], ipv4, port)
+
 		conn, err := net.Dial("tcp", ipv4+":"+port)
 		if err != nil {
 			logger.Fatal(err)
 		}
 		nodeConn := graphnet.NewNodeConn(conn, logger, dispatchTab)
-		ncp.AddUnregistered(nodeConn)
+		ws.ConnPool.AddUnregistered(nodeConn)
 		nodeConn.Index = int(ip[0])
 
 		// send current node index to dialee, but must make sure current
 		// node has been notified of index first
 		nodeIndexWg.Wait()
 		buf := make([]byte, 1)
-		buf[0] = byte(state.NodeIndex)
+		buf[0] = byte(ws.NodeIndex)
 		nodeConn.WriteBytes(graphnet.MSG_DIALER_INDEX, buf)
 	}
 
@@ -135,29 +137,41 @@ func main() {
 		nodeConn.Index = int(nodeIndex[0])
 	}
 
-	// begin listening
-	for i := 0; state.NodeIndex == 0 || i < state.NodeIndex; i++ {
+	// begin listening; expecting NodeIndex incoming dials (one from server,
+	// NodeIndex-1 from lower-indexed workers)
+	for i := 0; ws.NodeIndex == 0 || i < ws.NodeIndex; i++ {
 		conn, err := listener.Accept()
 		if err != nil {
 			logger.Fatal(err)
 		}
+		logger.Printf("Accepted incoming connection %s <- %s\n",
+			conn.LocalAddr().String(), conn.RemoteAddr().String())
 
 		nodeConn := graphnet.NewNodeConn(conn, logger, dispatchTab)
-		ncp.AddUnregistered(nodeConn)
+		ws.ConnPool.AddUnregistered(nodeConn)
 		setupWg.Done()
+
+		// first connection should be server; wait for node to receive its index
+		nodeIndexWg.Wait()
 	}
 
 	// wait for all handshake actions to complete
+	logger.Printf("Waiting for handshake to complete...\n")
 	setupWg.Wait()
 	logger.Printf("Handshake complete\n")
 
 	// reorder nodes so that they're in the correct order
-	ncp.Register()
-	if ncp.Index != state.NodeIndex {
+	ws.ConnPool.Register()
+	if ws.ConnPool.Index != ws.NodeIndex {
 		// just an extra check: these two values should be redundant
 		logger.Fatal("ncpIndex and state.NodeIndex should match")
 	}
 
 	// start coloring
 	//distributed.ColorDistributed()
+
+	// notify all of completion
+	buf := make([]byte, 1)
+	buf[0] = byte(ws.NodeIndex)
+	ws.ConnPool.Broadcast(graphnet.MSG_NODE_FINISHED, buf)
 }

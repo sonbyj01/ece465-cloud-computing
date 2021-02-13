@@ -42,6 +42,7 @@ default:
 	@echo "	run-client: run client (build if necessary)"
 	@echo "	clean: clean built files"
 	@echo "	logclear: clear logfiles"
+	@echo "	refresh: runs targets clean logclear server client"
 
 # canned recipes because we may want to always rebuild server or not
 define BUILD_SERVER=
@@ -88,3 +89,7 @@ clean:
 .PHONY: logclear
 logclear:
 	rm -f logs/*.log
+
+# refresh
+.PHONY: refresh
+refresh: clean logclear server client

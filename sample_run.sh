@@ -17,10 +17,10 @@ rm -f $CONFIG_NODES_FILE
 
 # write config nodes
 cat <<EOF >$CONFIG_NODES_FILE
-localhost:5000
-localhost:5001
-localhost:5002
-localhost:5003
+127.0.0.1:5000
+127.0.0.1:5001
+127.0.0.1:5002
+127.0.0.1:5003
 EOF
 
 # start clients
