@@ -55,7 +55,9 @@ func main() {
 	var wg sync.WaitGroup
 	nWorkers := len(addresses)
 	wg.Add(nWorkers)
-	dispatchTab[graphnet.MSG_NODE_FINISHED] = func(nodeIndex []byte) {
+	dispatchTab[graphnet.MSG_NODE_FINISHED] = func(nodeIndex []byte,
+		_ *graphnet.NodeConn) {
+
 		wg.Done()
 		logger.Printf("Node %d has finished processing.\n",
 			nodeIndex[0])

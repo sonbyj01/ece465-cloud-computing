@@ -79,7 +79,7 @@ func (ncp *NodeConnPool) BroadcastWorkers(msgType byte, buf []byte) {
 // Dispatch is a callback that takes a fixed-length slice of bytes, and is
 // associated with a particular message type. The length of the slice of bytes
 // is defined in graphnet.NUM_BYTES_MAP
-type Dispatch func([]byte)
+type Dispatch func([]byte, *NodeConn)
 
 // NodeConn is a struct to keep track of a single connection from this node
 // to another node
@@ -112,7 +112,7 @@ func (conn *NodeConn) Read() {
 		}
 
 		// dispatch action
-		go conn.dispatchTab[b](buf)
+		go conn.dispatchTab[b](buf, conn)
 	}
 
 	err := conn.conn.Close()

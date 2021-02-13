@@ -14,6 +14,8 @@ const (
 											// total node count and its index
 	MSG_NODE_ADDRESS		= byte(iota)	// server notifies a worker node of
 											// another work nodes' address
+	MSG_DIALER_INDEX		= byte(iota)	// dialing node tells dialee which
+											// node index it is
 )
 
 // mapping each message type to its number of bytes
@@ -25,6 +27,7 @@ var NUM_BYTES_MAP = map[byte]int{
 									// (including server)
 	MSG_NODE_ADDRESS: 7,			// 0: node index, 1-4: ipv4 address,
 									// 5-6: port
+	MSG_DIALER_INDEX: 1,			// 0: incoming node index
 }
 
 type VertexData struct {
