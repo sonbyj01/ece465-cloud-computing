@@ -44,6 +44,14 @@ func main() {
 	// create node connection pool
 	ncp := graphnet.NewNodeConnPool()
 
+	// create server dispatch table
+	// TODO: fill with actual handlers
+	var dispatchTab map[byte]graphnet.Dispatch
+	dispatchTab[graphnet.MSG_NODE_FINISHED] = graphnet.NewDispatch(
+		10,
+		func([]byte) { },
+	)
+
 	// establish a connection with each node from configuration file
 	for i, address := range addresses {
 		logger.Printf("Establishing connection with %s...\n", address)
@@ -53,18 +61,22 @@ func main() {
 		}
 
 		logger.Printf("Connection established with %s.\n", address)
-		nodeConn := graphnet.NewNodeConn(conn, logger)
+		nodeConn := graphnet.NewNodeConn(conn, logger, dispatchTab)
+		nodeConn.SetIndex(i + 1)
 		ncp.AddUnregistered(nodeConn)
+	}
 
-		// send information about other nodes to this node
-		for j, address2 := range addresses {
-			if i == j {
-				continue
-			}
+	// send information about all nodes to each node
+	for i, nodeConn := range ncp {
+		// TODO: send node index to node
 
-			*nodeConn.Channel() <- address2
+		// TODO: send total nodes count to node
+
+		// TODO: send addresses of higher indexed nodes to node
+		for j := i+1; j < len(addresses); j++ {
 		}
-		*nodeConn.Channel() <- "Done\n"
+
+		// TODO: end packet
 	}
 
 	// this shouldn't have any effect for the server, since all nodes were

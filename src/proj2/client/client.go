@@ -41,20 +41,28 @@ func main() {
 	// create node connection pool
 	ncp := graphnet.NewNodeConnPool()
 
-	// listen for connections from others
+	// TODO: create dispatch table
+	var dispatchTab map[byte]graphnet.Dispatch
+
+	// receive incoming connections from lower-indexed nodes
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			logger.Fatal(err)
 		}
 
-		nodeConn := graphnet.NewNodeConn(conn, logger)
+		nodeConn := graphnet.NewNodeConn(conn, logger, dispatchTab)
 		ncp.AddUnregistered(nodeConn)
 
 		for test := range *nodeConn.Channel() {
 			logger.Printf("Received %s\n", test)
 		}
 	}
+
+	// TODO: dial connections to higher-indexed nodes
+
+	// reorder nodes so that they're in the correct order
+	ncp.Register()
 
 	// start coloring
 	//distributed.ColorDistributed()

@@ -2,6 +2,7 @@ package graphnet
 
 import (
 	"bufio"
+	"io"
 	"log"
 	"net"
 )
@@ -33,29 +34,51 @@ func (ncp *NodeConnPool) Register() {
 	*ncp = orderedPool
 }
 
+// Dispatch tells the Read function how many bytes to read and what to do with
+// the bytes
+type Dispatch struct {
+	numBytes int
+	callback func([]byte)
+}
+
+// NewDispatch creates a new dispatch
+func NewDispatch(numBytes int, callback func([]byte)) Dispatch {
+	return Dispatch{numBytes, callback}
+}
+
 // NodeConn is a struct to keep track of a single connection from this node
 // to another node
 type NodeConn struct {
-	channel chan string
-	reader  *bufio.Reader
-	writer  *bufio.Writer
-	conn    net.Conn
-	logger  *log.Logger
-	index   int
+	channel     chan string
+	reader      *bufio.Reader
+	writer      *bufio.Writer
+	conn        net.Conn
+	logger      *log.Logger
+	index       int
+	dispatchTab map[byte]Dispatch
 }
 
 // Read listens on the connection's socket and outputs messages to the
 // connection channel
 func (conn *NodeConn) Read() {
 	for {
-		line, err := conn.reader.ReadString('\n')
-
-		// error if end of file reached
+		b, err := conn.reader.ReadByte()
 		if err != nil {
+			conn.logger.Println(err)
 			break
 		}
 
-		conn.channel <- line
+		// look up action in dispatch table
+		dispatch := conn.dispatchTab[b]
+		buf := make([]byte, dispatch.numBytes)
+		n, err := io.ReadFull(conn.reader, buf)
+		if n != dispatch.numBytes || err != nil {
+			conn.logger.Println(err)
+			break
+		}
+
+		// dispatch action
+		go dispatch.callback(buf)
 	}
 
 	err := conn.conn.Close()
@@ -64,18 +87,37 @@ func (conn *NodeConn) Read() {
 	}
 }
 
+// TODO: remove
 // Write sends messages sent to the channel over the network socket
-func (conn *NodeConn) Write() {
-	for data := range conn.channel {
-		_, err := conn.writer.WriteString(data)
-		if err != nil {
-			conn.logger.Fatal(err)
-		}
+//func (conn *NodeConn) Write() {
+//	for data := range conn.channel {
+//		_, err := conn.writer.WriteString(data)
+//		if err != nil {
+//			conn.logger.Fatal(err)
+//		}
+//
+//		err = conn.writer.Flush()
+//		if err != nil {
+//			conn.logger.Fatal(err)
+//		}
+//	}
+//}
 
-		err = conn.writer.Flush()
-		if err != nil {
-			conn.logger.Fatal(err)
-		}
+// WriteBytes allows you to write messages directly to the socket
+func (conn *NodeConn) WriteBytes(messageType byte, buffer []byte) {
+	err := conn.writer.WriteByte(messageType)
+	if err != nil {
+		conn.logger.Fatal(err)
+	}
+
+	n, err := conn.writer.Write(buffer)
+	if n != len(buffer) || err != nil {
+		conn.logger.Fatal(err)
+	}
+
+	err = conn.writer.Flush()
+	if err != nil {
+		conn.logger.Fatal(err)
 	}
 }
 
@@ -91,21 +133,24 @@ func (conn *NodeConn) SetIndex(index int) {
 
 // NewNodeConn returns a new node connection object for sending messages
 // to other nodes
-func NewNodeConn(conn net.Conn, logger *log.Logger) *NodeConn {
+func NewNodeConn(conn net.Conn, logger *log.Logger,
+	dispatchTab map[byte]Dispatch) *NodeConn {
+
 	writer := bufio.NewWriter(conn)
 	reader := bufio.NewReader(conn)
 
 	nodeConn := &NodeConn{
-		channel: make(chan string),
-		conn:    conn,
-		reader:  reader,
-		writer:  writer,
-		logger:  logger,
+		channel:     make(chan string),
+		conn:        conn,
+		reader:      reader,
+		writer:      writer,
+		logger:      logger,
+		dispatchTab: dispatchTab,
 	}
 
 	// begin listening for reading and writing
 	go nodeConn.Read()
-	go nodeConn.Write()
+	//go nodeConn.Write()
 
 	return nodeConn
 }
