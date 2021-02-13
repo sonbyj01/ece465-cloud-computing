@@ -14,7 +14,6 @@ const (
 											// total node count and its index
 	MSG_NODE_ADDRESS		= byte(iota)	// server notifies a worker node of
 											// another work nodes' address
-	MSG_HANDSHAKE_DONE		= byte(iota)	// server is finished with handshake
 )
 
 // mapping each message type to its number of bytes
@@ -26,7 +25,6 @@ var NUM_BYTES_MAP = map[byte]int{
 									// (including server)
 	MSG_NODE_ADDRESS: 7,			// 0: node index, 1-4: ipv4 address,
 									// 5-6: port
-	MSG_HANDSHAKE_DONE: 0,			// n/a
 }
 
 type VertexData struct {
