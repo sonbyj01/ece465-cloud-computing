@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"graph"
+	"log"
 	"os"
 	"runtime"
 )
@@ -18,18 +19,27 @@ func main() {
 	outFile := fmt.Sprintf("res/sample%d.graph", nVertices)
 
 	// generate some sample graphs for use as testcases
-	g1 := graph.NewRandomGraphParallel(nVertices, degree, nThreads)
+	g := graph.NewRandomGraphParallel(nVertices, degree, nThreads)
 
 	// write file
+	log.Printf("Creating graph file %s...\n", outFile)
 	file, err := os.OpenFile(outFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
 		0666)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	// dump
-	err = g1.Dump(bufio.NewWriter(file))
+	log.Printf("Writing to file...")
+	writer := bufio.NewWriter(file)
+	err = g.Dump(writer)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
+	err = writer.Flush()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	log.Printf("Done\n")
 }
