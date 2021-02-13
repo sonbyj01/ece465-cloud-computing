@@ -20,7 +20,7 @@ func CreateLogger(logType string) (*log.Logger, *os.File) {
 
 	// specifically use raw file (unbuffered) similar to stderr rather than
 	// bufio writer so that it records even in panic condition
-	logger := log.New(logFile, logType, log.LstdFlags)
+	logger := log.New(logFile, logType + ": ", log.LstdFlags)
 
 	// write initial message
 	logger.Printf("Beginning log for %s\n", logType)

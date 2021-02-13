@@ -65,21 +65,25 @@ func main() {
 
 	// establish a connection with each node from configuration file
 	for i, address := range addresses {
-		logger.Printf("Establishing connection with %s...\n", address)
+		logger.Printf("Establishing connection with %s (node %d)...\n",
+			address, i+1)
 		conn, err := net.Dial("tcp", address)
 		if err != nil {
 			logger.Fatal(err)
 		}
 
-		logger.Printf("Connection established with %s.\n", address)
+		logger.Printf("Connection established with %s (node %d).\n",
+			address, i+1)
 		nodeConn := graphnet.NewNodeConn(conn, logger, dispatchTab)
-		nodeConn.Index = i + 1
+		nodeConn.Index = i+1
 		ncp.AddUnregistered(nodeConn)
 	}
 
 	// send information about all nodes to each node
 	buf := make([]byte, 7)
 	for i, nodeConn := range ncp.Conns {
+		logger.Printf("Sending handshake to node %d\n", i+1)
+
 		// send node index and count to worker
 		buf[0] = byte(i+1)
 		buf[1] = byte(nWorkers+1)
@@ -99,6 +103,8 @@ func main() {
 			nodeConn.WriteBytes(graphnet.MSG_NODE_ADDRESS, buf[:7])
 		}
 	}
+
+	// TODO: wait for all handshakes to finish
 
 	// this shouldn't have any effect for the server, since all nodes were
 	// added in order

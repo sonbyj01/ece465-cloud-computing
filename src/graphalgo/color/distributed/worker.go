@@ -9,14 +9,15 @@ import (
 
 // colorSpeculative speculatively colors one group of vertices and notifies
 // other nodes when their neighbors are updated
-func colorSpeculative(u []int, maxColor int, sg *Subgraph,
-	nodes []graphnet.Node, wg *sync.WaitGroup) {
+func colorSpeculative(u []int, maxColor int, ws *WorkerState,
+	wg *sync.WaitGroup) {
 
 	defer wg.Done()
-	iBegin, iEnd := sg.iBegin, sg.iEnd
+	iBegin, iEnd := ws.VertexBegin, ws.VertexEnd
 	var color int
 	neighborColors := make([]bool, maxColor)
 	neighborColorsDefault := make([]bool, maxColor)
+	sg := ws.Subgraph
 
 	// loop over vertices for this thread
 	for _, i := range u {
@@ -27,9 +28,9 @@ func colorSpeculative(u []int, maxColor int, sg *Subgraph,
 		// speculatively color
 		for _, j := range v.Adj {
 			if j < iBegin || j >= iEnd {
-				color = sg.stored[j]
+				color = ws.stored[j]
 			} else {
-				color = sg.Vertices[j-sg.iBegin].Value
+				color = sg.Vertices[j-iBegin].Value
 			}
 
 			neighborColors[color] = true
@@ -43,11 +44,7 @@ func colorSpeculative(u []int, maxColor int, sg *Subgraph,
 				// notify all larger neighbors in different subgraphs
 				for _, k := range v.Adj {
 					if k >= iEnd {
-						// TODO: fix this
-						sg.sendVertexData(&nodes[0], graphnet.VertexData{
-							Vertices: make([]int, 0),
-							Colors:   make([]int16, 0),
-						})
+						// TODO: send vertex data to appropriate node
 					}
 				}
 
@@ -59,12 +56,13 @@ func colorSpeculative(u []int, maxColor int, sg *Subgraph,
 
 // resolveConflicts simply marks nodes that have conflicts to be recolored
 // in the next round; doesn't require any inter-node communication
-func resolveConflicts(u []int, sg *Subgraph, r *[]int, wg *sync.WaitGroup) {
+func resolveConflicts(u []int, ws *WorkerState, r *[]int, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
-	iBegin, iEnd := sg.iBegin, sg.iEnd
+	iBegin, iEnd := ws.VertexBegin, ws.VertexEnd
 	var color int
+	sg := ws.Subgraph
 
 	for _, i := range u {
 		v := &sg.Vertices[i]
@@ -73,7 +71,7 @@ func resolveConflicts(u []int, sg *Subgraph, r *[]int, wg *sync.WaitGroup) {
 			if j >= iBegin && j < iEnd {
 				color = sg.Vertices[j-iBegin].Value
 			} else {
-				color = sg.stored[j]
+				color = ws.stored[j]
 			}
 
 			// if conflict detected, set larger-indexed node to be recolored
@@ -86,11 +84,13 @@ func resolveConflicts(u []int, sg *Subgraph, r *[]int, wg *sync.WaitGroup) {
 
 // ColorDistributed is the main driver for the distributed coloring algorithm
 // on the slave node, and is called after all the connections are set up
-func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
-	maxColor, nThreads int, logger *log.Logger) {
+func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
+	logger *log.Logger) {
 
 	var wg sync.WaitGroup
-	nNodes := len(nodes)
+	sg := ws.Subgraph
+	//nNodes := len(sg.Vertices)
+	buf := make([]byte, 8)
 
 	// initialize U to be all of the vertices in sg
 	u := make([]int, len(sg.Vertices))
@@ -100,8 +100,9 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
 
 	r := make([]int, 0)
 
+	// TODO: remove
 	// keep track of how many other nodes are still computing
-	totalNodes := nNodes - 1
+	//totalNodes := nNodes - 1
 
 	// loop until u is empty
 	for len(u) > 0 {
@@ -113,28 +114,29 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
 		go func() {
 			defer wg.Done()
 
-			nodesWaiting := totalNodes
-			for vertexData := range nodes[0].GetVertexChannel() {
-				if vertexData.Type == graphnet.MSG_NODE_ROUND_FINISHED {
-					// one node finished its round
-					nodesWaiting--
-				} else if vertexData.Type == graphnet.MSG_NODE_FINISHED {
-					// one node finished all its work
-					totalNodes--
-					nodesWaiting--
-				} else {
-					// a node sent updated color information
-					colors := vertexData.Data.Colors
-					for i, index := range vertexData.Data.Vertices {
-						sg.stored[index] = int(colors[i])
-					}
-				}
-
-				// loop break condition
-				if nodesWaiting == 0 {
-					break
-				}
-			}
+			// TODO: use handlers
+			//nodesWaiting := totalNodes
+			//for vertexData := range nodes[0].GetVertexChannel() {
+			//	if vertexData.Type == graphnet.MSG_NODE_ROUND_FINISHED {
+			//		// one node finished its round
+			//		nodesWaiting--
+			//	} else if vertexData.Type == graphnet.MSG_NODE_FINISHED {
+			//		// one node finished all its work
+			//		totalNodes--
+			//		nodesWaiting--
+			//	} else {
+			//		// a node sent updated color information
+			//		colors := vertexData.Data.Colors
+			//		for i, index := range vertexData.Data.Vertices {
+			//			sg.stored[index] = int(colors[i])
+			//		}
+			//	}
+			//
+			//	// loop break condition
+			//	if nodesWaiting == 0 {
+			//		break
+			//	}
+			//}
 		}()
 
 		// loop over vertices, assign each vertex a permissible color
@@ -142,7 +144,6 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
 		// receive color information from other nodes;
 		// don't use supersteps, rather choose number of threads; channels
 		// will be buffered anyways
-		// TODO: run these in parallel
 		nVertices := len(u)
 		verticesPerThread := int(math.Ceil(float64(nVertices / nThreads)))
 		wg.Add(nThreads)
@@ -153,12 +154,12 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
 				end = nVertices
 			}
 
-			go colorSpeculative(u[start:end], maxColor, sg, nodes, &wg)
+			go colorSpeculative(u[start:end], maxColor, ws, &wg)
 		}
 
-		// when speculative coloring for this round is done, notify all nodes
-		// TODO: broadcast this to all nodes
-		sg.sendControlMessage(&nodes[0], graphnet.MSG_NODE_ROUND_FINISHED)
+		// when speculative coloring for this round is done, notify workers
+		buf[0] = byte(ws.NodeIndex)
+		ws.ConnPool.BroadcastWorkers(graphnet.MSG_NODE_ROUND_FINISHED, buf[:1])
 
 		// wait until all incoming messages are successfully received;
 		// this makes all steps work in lockstep
@@ -176,7 +177,7 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
 				end = nVertices
 			}
 
-			go resolveConflicts(u[start:end], sg, &r, &wg)
+			go resolveConflicts(u[start:end], ws, &r, &wg)
 		}
 		wg.Wait()
 
@@ -185,9 +186,7 @@ func ColorDistributed(sg *Subgraph, nodes []graphnet.Node,
 		r = u[:0]
 	}
 
-	// TODO: when done coloring, notify all nodes
-	ncp := graphnet.NewNodeConnPool()
-	buf := make([]byte, 1)
-	buf[0] = byte(sg.pos)
-	ncp.Broadcast(graphnet.MSG_NODE_FINISHED, buf)
+	// when done coloring, notify all nodes
+	buf[0] = byte(ws.NodeIndex)
+	ws.ConnPool.Broadcast(graphnet.MSG_NODE_FINISHED, buf[:1])
 }

@@ -1,14 +1,12 @@
 package distributed
 
 import (
-	"graphnet"
 	"io"
 )
 
 // InitConnections will reach out to all of the clients specified in configFile
-func InitConnections(configFile io.Reader) []graphnet.Node {
+func InitConnections(configFile io.Reader) {
 	// TODO
-	return make([]graphnet.Node, 0)
 }
 
 // SendConnections will send connection info about nodes to all of the nodes

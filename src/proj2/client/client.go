@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"flag"
+	"fmt"
 	"graphalgo/color/distributed"
 	"graphnet"
 	"net"
@@ -13,7 +14,7 @@ import (
 
 // main is the driver to be built into the executable for the client
 func main() {
-	logger, logFile := common.CreateLogger("client")
+	logger, logFile := common.CreateLogger("worker")
 	defer func() {
 		err := logFile.Close()
 		if err != nil {
@@ -76,15 +77,18 @@ func main() {
 	}
 
 	// receive total number of nodes, begin listening for nodes to dial
-	setupWg.Add(1)
+	setupWg.Add(2)
 	nodeIndexWg.Add(1)
 	dispatchTab[graphnet.MSG_NODE_INDEX_COUNT] = func(indexCount []byte,
-		_ *graphnet.NodeConn) {
+		nodeConn *graphnet.NodeConn) {
 
 		defer setupWg.Done()
 		defer nodeIndexWg.Done()
 
-		logger.Printf("Node %d, %d total nodes.",
+		// update logger prefix
+		logger.SetPrefix(fmt.Sprintf("worker %d: ", indexCount[0]))
+
+		logger.Printf("Got node index %d, %d total nodes.",
 			indexCount[0], indexCount[1])
 		state.NodeIndex = int(indexCount[0])
 		state.NodeCount = int(indexCount[1])
@@ -93,16 +97,9 @@ func main() {
 		// add two items to the waitgroup per node: one for the initial
 		// connection, one for the extra message indicating which node it is
 		setupWg.Add(2 * (state.NodeIndex-1))
-		for i := 0; i < state.NodeIndex-1; i++ {
-			conn, err := listener.Accept()
-			if err != nil {
-				logger.Fatal(err)
-			}
 
-			nodeConn := graphnet.NewNodeConn(conn, logger, dispatchTab)
-			ncp.AddUnregistered(nodeConn)
-			setupWg.Done()
-		}
+		// set index of server to 0
+		nodeConn.Index = 0
 	}
 
 	// receive address of higher-indexed node, dial it
@@ -136,6 +133,18 @@ func main() {
 		defer setupWg.Done()
 		logger.Printf("Received dial from %d\n", nodeIndex[0])
 		nodeConn.Index = int(nodeIndex[0])
+	}
+
+	// begin listening
+	for i := 0; state.NodeIndex == 0 || i < state.NodeIndex; i++ {
+		conn, err := listener.Accept()
+		if err != nil {
+			logger.Fatal(err)
+		}
+
+		nodeConn := graphnet.NewNodeConn(conn, logger, dispatchTab)
+		ncp.AddUnregistered(nodeConn)
+		setupWg.Done()
 	}
 
 	// wait for all handshake actions to complete
