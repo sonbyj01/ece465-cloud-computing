@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/binary"
 	"flag"
-	"graphalgo/color/distributed"
 	"graphnet"
 	"net"
 	"proj2/common"
@@ -41,13 +40,12 @@ func main() {
 	}()
 
 	// this stores algorithm state
-	sg_state := distributed.Subgraph{}
+	//sg_state := distributed.Subgraph{}
 
 	// create node connection pool
 	ncp := graphnet.NewNodeConnPool()
 	var currentIndex, totalIndices int
 
-	// TODO: create dispatch table
 	dispatchTab := make(map[byte]graphnet.Dispatch)
 	dispatchTab[graphnet.MSG_VERTEX_INFO] = func(vertexInfo []byte) {
 		logger.Printf("Indexes %d have been updated to %d.",
@@ -63,7 +61,7 @@ func main() {
 			nodeIndex[0])
 	}
 	dispatchTab[graphnet.MSG_NODE_INDEX_COUNT] = func(indexCount []byte) {
-		logger.Printf("Node %d has %d total nodes.",
+		logger.Printf("Node %d, %d total nodes.",
 			indexCount[0], indexCount[1])
 		currentIndex = int(indexCount[0])
 		totalIndices = int(indexCount[1])
@@ -91,13 +89,7 @@ func main() {
 
 		nodeConn := graphnet.NewNodeConn(conn, logger, dispatchTab)
 		ncp.AddUnregistered(nodeConn)
-
-		for test := range *nodeConn.Channel() {
-			logger.Printf("Received %s\n", test)
-		}
 	}
-
-	// TODO: dial connections to higher-indexed nodes
 
 	// reorder nodes so that they're in the correct order
 	ncp.Register()
