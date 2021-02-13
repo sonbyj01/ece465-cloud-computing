@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"encoding/binary"
 	"flag"
+	"fmt"
 	"graphnet"
+	"math"
 	"net"
 	"os"
 	"proj2/common"
@@ -26,7 +28,9 @@ func main() {
 
 	// Takes in command line flag(s)
 	configFile := flag.String("config", "",
-		"File containing the node configurations")
+		"Node addresses file")
+	graphFile := flag.String("graph", "",
+		"Graph description file")
 	flag.Parse()
 	if *configFile == "" {
 		logger.Fatal("No configuration file.")
@@ -51,6 +55,9 @@ func main() {
 
 	// create server dispatch table
 	dispatchTab := make(map[byte]graphnet.Dispatch)
+
+	// buffer for sending
+	buf := make([]byte, 8)
 
 	// wait for all handshakes to finish; workers will send ack upon finishing
 	// handshake
@@ -89,14 +96,14 @@ func main() {
 	}
 
 	// send information about all nodes to each node
-	buf := make([]byte, 7)
 	for i, nodeConn := range ncp.Conns {
 		logger.Printf("Sending handshake to node %d\n", i+1)
 
 		// send node index and count to worker
 		buf[0] = byte(i + 1)
 		buf[1] = byte(nWorkers + 1)
-		nodeConn.WriteBytes(graphnet.MSG_NODE_INDEX_COUNT, buf[:2])
+		nodeConn.WriteBytes(graphnet.MSG_NODE_INDEX_COUNT, buf[:2],
+			false)
 
 		// send addresses of higher indexed nodes to node
 		for j := i + 1; j < len(addresses); j++ {
@@ -110,7 +117,8 @@ func main() {
 				logger.Fatal(err)
 			}
 			binary.LittleEndian.PutUint16(buf[5:7], uint16(port))
-			nodeConn.WriteBytes(graphnet.MSG_NODE_ADDRESS, buf[:7])
+			nodeConn.WriteBytes(graphnet.MSG_NODE_ADDRESS, buf[:7],
+				false)
 		}
 	}
 
@@ -118,7 +126,46 @@ func main() {
 	// for the server
 	ncp.Register()
 
-	// TODO: stream subgraphs to files
+	// divide graph into equally-sized subgraphs (padding with empty nodes
+	// as necessary) and streaming
+	// TODO: should probably move this to its own function
+	file, err = os.Open(*graphFile)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	scanner := bufio.NewScanner(file)
+	scanner.Scan()
+	nVertices, err := strconv.Atoi(scanner.Text())
+	if err != nil {
+		logger.Fatal(err)
+	}
+	verticesPerNode := int(math.Ceil(float64(nVertices) / float64(nWorkers)))
+	for i, nodeConn := range ncp.Conns {
+		if i == 0 {
+			continue
+		}
+
+		// begin writing file
+		nodeConn.WriteBytes(graphnet.MSG_SUBGRAPH, buf[:0], true)
+
+		nodeConn.WriteBytes(graphnet.MSG_CONT,
+			[]byte(fmt.Sprintf("%d", verticesPerNode)), true)
+
+		// send vertices, pad with disconnected vertices if necessary
+		for j := 0; j < verticesPerNode; j++ {
+			nodeConn.WriteBytes(graphnet.MSG_CONT, []byte("\n"), true)
+			if scanner.Scan() {
+				nodeConn.WriteBytes(graphnet.MSG_CONT, scanner.Bytes(),
+					true)
+			} else {
+				nodeConn.WriteBytes(graphnet.MSG_CONT, []byte("0;"),
+					true)
+			}
+		}
+
+		// end write file
+		nodeConn.WriteBytes(graphnet.DELIM_EOF, buf[:0], false)
+	}
 
 	// wait for all nodes to finish handshake
 	handshakeWg.Wait()

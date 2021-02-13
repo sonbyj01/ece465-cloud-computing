@@ -49,7 +49,7 @@ func Load(reader io.Reader) (*Graph, error) {
 		v := &g.Vertices[i]
 
 		// split into value and adj list
-		vertexComponents := strings.Split(scanner.Text(), ":")
+		vertexComponents := strings.Split(scanner.Text(), ";")
 
 		// get vertex value
 		value, err := strconv.Atoi(vertexComponents[0])
@@ -58,7 +58,10 @@ func Load(reader io.Reader) (*Graph, error) {
 		}
 		v.Value = value
 
-		// get vertex adjacency list
+		// get vertex adjacency list, or skip if no adjacent vertices
+		if len(vertexComponents[1]) == 0 {
+			continue
+		}
 		for _, adj := range strings.Split(vertexComponents[1], ",") {
 			adjInt, err := strconv.Atoi(adj)
 			if err != nil {
@@ -74,7 +77,7 @@ func Load(reader io.Reader) (*Graph, error) {
 // Dump writes a graph to file
 func (g *Graph) Dump(writer io.Writer) error {
 	// write number of vertices
-	_, err := io.WriteString(writer, strconv.Itoa(len(g.Vertices)) + "\n")
+	_, err := io.WriteString(writer, strconv.Itoa(len(g.Vertices))+"\n")
 	if err != nil {
 		return err
 	}
@@ -83,10 +86,13 @@ func (g *Graph) Dump(writer io.Writer) error {
 	for i := range g.Vertices {
 		v := &g.Vertices[i]
 		s := strconv.Itoa(v.Value) + ";"
-		for _, j := range v.Adj {
-			s += strconv.Itoa(j) + ","
+		for index, j := range v.Adj {
+			if index > 0 {
+				s += ","
+			}
+			s += strconv.Itoa(j)
 		}
-		_, err = io.WriteString(writer, s[:len(s)-1] + "\n")
+		_, err = io.WriteString(writer, s+"\n")
 		if err != nil {
 			return err
 		}

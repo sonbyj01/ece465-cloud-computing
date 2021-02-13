@@ -7,7 +7,7 @@ import (
 
 // WorkerState holds the algorithm state for a worker node
 type WorkerState struct {
-	Subgraph    graph.Graph
+	Subgraph    *graph.Graph
 	NodeIndex   int         // node index in NodeConnPool
 	NodeCount   int         // total number of nodes (including server)
 	VertexBegin int         // start of vertex range

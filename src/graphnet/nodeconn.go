@@ -59,7 +59,7 @@ func (ncp *NodeConnPool) Broadcast(msgType byte, buf []byte) {
 
 	for _, nodeConn := range ncp.Conns {
 		if nodeConn != nil && nodeConn.open {
-			nodeConn.WriteBytes(msgType, buf)
+			nodeConn.WriteBytes(msgType, buf, false)
 		}
 	}
 }
@@ -73,7 +73,7 @@ func (ncp *NodeConnPool) BroadcastWorkers(msgType byte, buf []byte) {
 
 	for i, nodeConn := range ncp.Conns {
 		if nodeConn != nil && i > 0 && nodeConn.open {
-			nodeConn.WriteBytes(msgType, buf)
+			nodeConn.WriteBytes(msgType, buf, false)
 		}
 	}
 }
@@ -98,6 +98,7 @@ type NodeConn struct {
 // Read listens on the connection's socket and outputs messages to the
 // connection channel
 func (conn *NodeConn) Read() {
+	var buf []byte
 	for {
 		b, err := conn.reader.ReadByte()
 		if err == io.EOF {
@@ -107,11 +108,20 @@ func (conn *NodeConn) Read() {
 		}
 
 		// look up action in dispatch table
-		buf := make([]byte, NUM_BYTES_MAP[b])
-		n, err := io.ReadFull(conn.reader, buf)
+		numBytes := NUM_BYTES_MAP[b]
+		if numBytes == -1 {
+			// read file until delim, and trim delim
+			buf, err = conn.reader.ReadBytes(DELIM_EOF)
+			buf = buf[:len(buf)-1]
+		} else {
+			// read fixed number of bytes
+			buf = make([]byte, numBytes)
+			_, err = io.ReadFull(conn.reader, buf)
+		}
+
 		if err == io.EOF {
 			break
-		} else if n != NUM_BYTES_MAP[b] || err != nil {
+		} else if err != nil {
 			conn.logger.Fatal(err)
 		}
 
@@ -122,25 +132,35 @@ func (conn *NodeConn) Read() {
 	conn.Close()
 }
 
-// WriteBytes allows you to write messages directly to the socket
-func (conn *NodeConn) WriteBytes(messageType byte, buffer []byte) {
+// WriteBytes allows you to write messages directly to the socket; use
+// messageType of MSG_CONT if this buffer is a continuation
+func (conn *NodeConn) WriteBytes(messageType byte, buffer []byte,
+	buffered bool) {
+
 	if !conn.open {
 		return
 	}
 
-	err := conn.writer.WriteByte(messageType)
-	if err != nil {
-		conn.logger.Fatal(err)
+	// send message type if this is not a continuation
+	if messageType != MSG_CONT {
+		err := conn.writer.WriteByte(messageType)
+		if err != nil {
+			conn.logger.Fatal(err)
+		}
 	}
 
+	// write buffer
 	n, err := conn.writer.Write(buffer)
 	if n != len(buffer) || err != nil {
 		conn.logger.Fatal(err)
 	}
 
-	err = conn.writer.Flush()
-	if err != nil {
-		conn.logger.Fatal(err)
+	// flush if not buffered
+	if !buffered {
+		err = conn.writer.Flush()
+		if err != nil {
+			conn.logger.Fatal(err)
+		}
 	}
 }
 

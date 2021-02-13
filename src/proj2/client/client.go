@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"flag"
 	"fmt"
+	"graph"
 	"graphalgo/color/distributed"
 	"graphnet"
 	"net"
@@ -128,7 +130,7 @@ func main() {
 		nodeIndexWg.Wait()
 		buf := make([]byte, 1)
 		buf[0] = byte(ws.NodeIndex)
-		nodeConn.WriteBytes(graphnet.MSG_DIALER_INDEX, buf)
+		nodeConn.WriteBytes(graphnet.MSG_DIALER_INDEX, buf, false)
 	}
 
 	// receive node index of dialee
@@ -138,6 +140,18 @@ func main() {
 		defer setupWg.Done()
 		logger.Printf("Received dial from %d\n", nodeIndex[0])
 		nodeConn.Index = int(nodeIndex[0])
+	}
+
+	// receive subgraph
+	dispatchTab[graphnet.MSG_SUBGRAPH] = func(buf []byte,
+		_ *graphnet.NodeConn) {
+
+		logger.Printf("Receiving subgraph...\n")
+		ws.Subgraph, err = graph.Load(bytes.NewReader(buf))
+		if err != nil {
+			logger.Fatal(err)
+		}
+		logger.Printf("Finished receiving subgraph.\n")
 	}
 
 	// begin listening; expecting NodeIndex incoming dials (one from server,
@@ -162,7 +176,7 @@ func main() {
 	setupWg.Wait()
 	logger.Printf("Handshake complete\n")
 	buf[0] = byte(ws.NodeIndex)
-	ws.ConnPool.Conns[0].WriteBytes(graphnet.MSG_ACK, buf[:1])
+	ws.ConnPool.Conns[0].WriteBytes(graphnet.MSG_ACK, buf[:1], false)
 
 	// reorder nodes so that they're in the correct order
 	ws.ConnPool.Register()

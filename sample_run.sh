@@ -33,4 +33,4 @@ target/client_latest --port 5003 &
 sleep 0.5
 
 # start server
-target/server_latest --config $CONFIG_NODES_FILE & # --graph $GRAPH_FILE &
+target/server_latest --config $CONFIG_NODES_FILE --graph $GRAPH_FILE &

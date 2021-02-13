@@ -13,8 +13,8 @@ import (
 // the real drivers for Project 2 are in proj2/client and proj2/server.
 func main() {
 	// params for sample graph
-	nVertices := 10000
-	degree := float32(1000)
+	nVertices := 10
+	degree := float32(2)
 	nThreads := 2 * runtime.NumCPU()
 	outFile := fmt.Sprintf("res/sample%d.graph", nVertices)
 

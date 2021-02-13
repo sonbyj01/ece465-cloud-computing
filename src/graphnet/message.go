@@ -24,18 +24,32 @@ const (
 	MSG_NODE_ADDRESS = byte(iota)
 	// MSG_DIALER_INDEX dialer worker tells dialee worker its node index
 	MSG_DIALER_INDEX = byte(iota)
+
+	// messages for sending subgraph
+
+	// MSG_SUBGRAPH is for sending subgraph
+	MSG_SUBGRAPH = byte(iota)
+
+	// MSG_CONT indicates not to send a message type, this buffer is a
+	// continuation of the last byte buffer
+	MSG_CONT = byte(255)
 )
 
-// NUM_BYTES_MAP maps each message type to its number of bytes
+// NUM_BYTES_MAP maps each message type to its number of bytes; -1 indicates
+// reading arbitrary-length data as string until DELIM_EOF is found
 var NUM_BYTES_MAP = map[byte]int{
-	MSG_ACK:                 1, // 0: node index
-	MSG_VERTEX_INFO:         8, // 0-3: color, 4-7: index
-	MSG_NODE_FINISHED:       1, // 0: node index
-	MSG_NODE_ROUND_FINISHED: 1, // 0: node index
-	MSG_NODE_INDEX_COUNT:    2, // 0: node index, 1: total nodes including serv
-	MSG_NODE_ADDRESS:        7, // 0: node index, 1-4: ipv4 address, 5-6 port
-	MSG_DIALER_INDEX:        1, // 0: incoming node index
+	MSG_ACK:                 1,  // 0: node index
+	MSG_VERTEX_INFO:         8,  // 0-3: color, 4-7: index
+	MSG_NODE_FINISHED:       1,  // 0: node index
+	MSG_NODE_ROUND_FINISHED: 1,  // 0: node index
+	MSG_NODE_INDEX_COUNT:    2,  // 0: node index, 1: total nodes including serv
+	MSG_NODE_ADDRESS:        7,  // 0: node index, 1-4: ipv4 address, 5-6 port
+	MSG_DIALER_INDEX:        1,  // 0: incoming node index
+	MSG_SUBGRAPH:            -1, // variable length string until DELIM_EOF
 }
+
+// DELIM_EOF is used to indicate end of string; null byte is used arbitrarily
+const DELIM_EOF = byte(0)
 
 // VertexData is used to send a buffer of vertex data
 // TODO: use this and buffer vertex info; currently only one vertex is
