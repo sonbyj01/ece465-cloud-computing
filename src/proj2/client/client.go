@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/binary"
 	"flag"
+	"graphalgo/color/distributed"
 	"graphnet"
 	"net"
 	"proj2/common"
@@ -38,11 +40,47 @@ func main() {
 		}
 	}()
 
+	// this stores algorithm state
+	sg_state := distributed.Subgraph{}
+
 	// create node connection pool
 	ncp := graphnet.NewNodeConnPool()
+	var currentIndex, totalIndices int
 
 	// TODO: create dispatch table
 	dispatchTab := make(map[byte]graphnet.Dispatch)
+	dispatchTab[graphnet.MSG_VERTEX_INFO] = func(vertexInfo []byte) {
+		logger.Printf("Indexes %d have been updated to %d.",
+			binary.LittleEndian.Uint32(vertexInfo[4:]),
+			binary.LittleEndian.Uint32(vertexInfo[:4]))
+	}
+	dispatchTab[graphnet.MSG_NODE_FINISHED] = func(nodeIndex []byte) {
+		logger.Printf("Node %d has finished processing.\n",
+			nodeIndex[0])
+	}
+	dispatchTab[graphnet.MSG_NODE_ROUND_FINISHED] = func(nodeIndex []byte) {
+		logger.Printf("Node %d has finished a round.\n",
+			nodeIndex[0])
+	}
+	dispatchTab[graphnet.MSG_NODE_INDEX_COUNT] = func(indexCount []byte) {
+		logger.Printf("Node %d has %d total nodes.",
+			indexCount[0], indexCount[1])
+		currentIndex = int(indexCount[0])
+		totalIndices = int(indexCount[1])
+	}
+	dispatchTab[graphnet.MSG_NODE_ADDRESS] = func(ip []byte) {
+		logger.Printf("Node %d has IP of %d.%d.%d.%d and port of %d",
+			ip[0], ip[1], ip[2], ip[3], ip[4], ip[5:])
+		ipv4 := net.IP(ip[1:5]).String()
+		port := strconv.Itoa(int(binary.LittleEndian.Uint16(ip[5:])))
+		conn, err := net.Dial("tcp",ipv4+":"+port)
+		if err != nil {
+			logger.Fatal(err)
+		}
+		node := graphnet.NewNodeConn(conn, logger, dispatchTab)
+		ncp.AddUnregistered(node)
+		node.Index = int(ip[0])
+	}
 
 	// receive incoming connections from lower-indexed nodes
 	for {

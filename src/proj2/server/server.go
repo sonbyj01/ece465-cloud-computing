@@ -55,27 +55,10 @@ func main() {
 	var wg sync.WaitGroup
 	nWorkers := len(addresses)
 	wg.Add(nWorkers)
-	dispatchTab[graphnet.MSG_VERTEX_INFO] = func(vertexInfo []byte) {
-		logger.Printf("Indexes %d, %d, %d, %d have been updated to %d, %d, %d, %d.",
-			vertexInfo[4], vertexInfo[5], vertexInfo[6], vertexInfo[7],
-			vertexInfo[0], vertexInfo[1], vertexInfo[2], vertexInfo[3])
-	}
 	dispatchTab[graphnet.MSG_NODE_FINISHED] = func(nodeIndex []byte) {
 		wg.Done()
 		logger.Printf("Node %d has finished processing.\n",
 			nodeIndex[0])
-	}
-	dispatchTab[graphnet.MSG_NODE_ROUND_FINISHED] = func(nodeIndex []byte) {
-		logger.Printf("Node %d has finished a round.\n",
-			nodeIndex[0])
-	}
-	dispatchTab[graphnet.MSG_NODE_INDEX_COUNT] = func(indexCount []byte) {
-		logger.Printf("Node %d has %d total nodes.",
-			indexCount[0], indexCount[1])
-	}
-	dispatchTab[graphnet.MSG_NODE_IP] = func(ip []byte) {
-		logger.Printf("Node %d has IP of %d.%d.%d.%d and port of %d",
-			ip[1], ip[2], ip[3], ip[4], ip[5:])
 	}
 
 	// establish a connection with each node from configuration file
