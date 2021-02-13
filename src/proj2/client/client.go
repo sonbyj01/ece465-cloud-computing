@@ -42,7 +42,7 @@ func main() {
 	ncp := graphnet.NewNodeConnPool()
 
 	// TODO: create dispatch table
-	var dispatchTab map[byte]graphnet.Dispatch
+	dispatchTab := make(map[byte]graphnet.Dispatch)
 
 	// receive incoming connections from lower-indexed nodes
 	for {

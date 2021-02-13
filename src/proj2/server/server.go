@@ -46,7 +46,7 @@ func main() {
 
 	// create server dispatch table
 	// TODO: fill with actual handlers
-	var dispatchTab map[byte]graphnet.Dispatch
+	dispatchTab := make(map[byte]graphnet.Dispatch)
 	dispatchTab[graphnet.MSG_NODE_FINISHED] = graphnet.NewDispatch(
 		10,
 		func([]byte) { },
