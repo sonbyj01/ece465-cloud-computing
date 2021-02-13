@@ -1,29 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"flag"
-	"fmt"
 	"graphnet"
 	"net"
 	"proj2/common"
 	"strconv"
 )
-
-// https://dev.to/alicewilliamstech/getting-started-with-sockets-in-golang-2j66
-func handleConnection(conn net.Conn) {
-	buffer, err := bufio.NewReader(conn).ReadBytes('\n')
-
-	if err != nil {
-		fmt.Println("Client left.")
-		conn.Close()
-		return
-	}
-
-	fmt.Println("Client Message: ", string(buffer[:len(buffer)-1]))
-	conn.Write(buffer)
-	handleConnection(conn)
-}
 
 // main is the driver to be built into the executable for the client
 func main() {
@@ -55,8 +38,8 @@ func main() {
 		}
 	}()
 
-	// initialize array of connections
-	allNodes := make(map[*graphnet.Node]int)
+	// create node connection pool
+	ncp := graphnet.NewNodeConnPool()
 
 	// listen for connections from others
 	for {
@@ -65,16 +48,12 @@ func main() {
 			logger.Fatal(err)
 		}
 
-		client := graphnet.NewClient(conn)
-		//node := graphnet.NewNode(conn)
-		//for nodeList, _ := range allNodes {
-		//	if nodeList.Connection == nil {
-		//		node.Connection = nodeList
-		//		nodeList.Connection = node
-		//		fmt.Println("Connected")
-		//	}
-		//}
-		//allNodes[node] = 1
+		nodeConn := graphnet.NewNodeConn(conn, logger)
+		ncp.AddUnregistered(nodeConn)
+
+		for test := range *nodeConn.Channel() {
+			logger.Printf("Received %s\n", test)
+		}
 	}
 
 	// start coloring

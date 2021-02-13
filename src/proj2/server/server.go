@@ -21,8 +21,6 @@ func main() {
 	}()
 
 	// Takes in command line flag(s)
-	// https://stackoverflow.com/questions/45117892
-	// https://gobyexample.com/command-line-flags
 	configFile := flag.String("config", "",
 		"File containing the node configurations")
 	flag.Parse()
@@ -43,8 +41,10 @@ func main() {
 		addresses = append(addresses, fileScanner.Text())
 	}
 
+	// create node connection pool
+	ncp := graphnet.NewNodeConnPool()
+
 	// establish a connection with each node from configuration file
-	// https://dev.to/alicewilliamstech/getting-started-with-sockets-in-golang-2j66
 	for i, address := range addresses {
 		logger.Printf("Establishing connection with %s...\n", address)
 		conn, err := net.Dial("tcp", address)
@@ -53,29 +53,23 @@ func main() {
 		}
 
 		logger.Printf("Connection established with %s.\n", address)
-
-		client := graphnet.NewClient(conn)
+		nodeConn := graphnet.NewNodeConn(conn, logger)
+		ncp.AddUnregistered(nodeConn)
 
 		// send information about other nodes to this node
-		for j := range addresses {
+		for j, address2 := range addresses {
 			if i == j {
 				continue
 			}
 
-
+			*nodeConn.Channel() <- address2
 		}
-
-		//reader := bufio.NewReader(os.Stdin)
-		//
-		//for {
-		//	fmt.Print("Text to send: ")
-		//	input, _ := reader.ReadString('\n')	// request
-		//	fmt.Fprintf(conn, input)
-		//	fmt.Println(input)
-		//	//message, _ := bufio.NewReader(conn).ReadString('\n') // response
-		//	//fmt.Println("Server relay: ", message)
-		//}
+		*nodeConn.Channel() <- "Done\n"
 	}
+
+	// this shouldn't have any effect for the server, since all nodes were
+	// added in order
+	ncp.Register()
 
 	// start coloring
 	//distributed.ColorDistributedServer()
