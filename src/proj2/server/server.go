@@ -49,9 +49,9 @@ func main() {
 	ncp := graphnet.NewNodeConnPool()
 
 	// create server dispatch table
-	// TODO: fill with actual handlers
 	dispatchTab := make(map[byte]graphnet.Dispatch)
 
+	// handler for MSG_NODE_FINISHED: when all nodes finished, finish
 	var wg sync.WaitGroup
 	nWorkers := len(addresses)
 	wg.Add(nWorkers)
@@ -96,8 +96,6 @@ func main() {
 			binary.LittleEndian.PutUint16(buf[5:7], uint16(port))
 			nodeConn.WriteBytes(graphnet.MSG_NODE_ADDRESS, buf[:7])
 		}
-
-		nodeConn.WriteBytes(graphnet.MSG_HANDSHAKE_DONE, buf[:0])
 	}
 
 	// this shouldn't have any effect for the server, since all nodes were
@@ -108,4 +106,12 @@ func main() {
 
 	// TODO: start coloring
 	// distributed.ColorDistributedServer()
+
+	// wait until all nodes finished; this will activate when nWorkers
+	// MSG_NODE_FINISHED are received
+	wg.Wait()
+
+	// TODO: collect subgraphs and verify coloring
+
+	logger.Printf("Done.")
 }

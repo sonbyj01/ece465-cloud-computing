@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"flag"
+	"graphalgo/color/distributed"
 	"graphnet"
 	"net"
 	"proj2/common"
@@ -40,12 +41,12 @@ func main() {
 	}()
 
 	// this stores algorithm state
-	//sg_state := distributed.Subgraph{}
+	state := distributed.WorkerState{}
 
 	// create node connection pool
 	ncp := graphnet.NewNodeConnPool()
-	var currentIndex, totalIndices int
 
+	// worker message handlers
 	dispatchTab := make(map[byte]graphnet.Dispatch)
 	dispatchTab[graphnet.MSG_VERTEX_INFO] = func(vertexInfo []byte) {
 		logger.Printf("Indexes %d have been updated to %d.",
@@ -63,8 +64,8 @@ func main() {
 	dispatchTab[graphnet.MSG_NODE_INDEX_COUNT] = func(indexCount []byte) {
 		logger.Printf("Node %d, %d total nodes.",
 			indexCount[0], indexCount[1])
-		currentIndex = int(indexCount[0])
-		totalIndices = int(indexCount[1])
+		state.NodeIndex = int(indexCount[0])
+		state.NodeCount = int(indexCount[1])
 	}
 	dispatchTab[graphnet.MSG_NODE_ADDRESS] = func(ip []byte) {
 		logger.Printf("Node %d has IP of %d.%d.%d.%d and port of %d",
