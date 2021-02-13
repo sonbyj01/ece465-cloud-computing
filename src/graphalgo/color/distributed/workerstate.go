@@ -12,6 +12,6 @@ type WorkerState struct {
 	NodeCount   int         // total number of nodes (including server)
 	VertexBegin int         // start of vertex range
 	VertexEnd   int         // end of vertex range
-	stored      map[int]int // stored neighbor vertex values
+	stored      map[int]int // received neighbor vertex values
 	ConnPool    graphnet.NodeConnPool
 }

@@ -44,6 +44,7 @@ func main() {
 		logger.Printf("Reading config: %s\n", fileScanner.Text())
 		addresses = append(addresses, fileScanner.Text())
 	}
+	nWorkers := len(addresses)
 
 	// create node connection pool
 	ncp := graphnet.NewNodeConnPool()
@@ -51,9 +52,17 @@ func main() {
 	// create server dispatch table
 	dispatchTab := make(map[byte]graphnet.Dispatch)
 
+	// wait for all handshakes to finish; workers will send ack upon finishing
+	// handshake
+	var handshakeWg sync.WaitGroup
+	handshakeWg.Add(nWorkers)
+	dispatchTab[graphnet.MSG_ACK] = func(buf []byte, _ *graphnet.NodeConn) {
+		handshakeWg.Done()
+		logger.Printf("Node %d has completed handshake.\n", buf[0])
+	}
+
 	// handler for MSG_NODE_FINISHED: when all nodes finished, finish
 	var wg sync.WaitGroup
-	nWorkers := len(addresses)
 	wg.Add(nWorkers)
 	dispatchTab[graphnet.MSG_NODE_FINISHED] = func(nodeIndex []byte,
 		_ *graphnet.NodeConn) {
@@ -75,7 +84,7 @@ func main() {
 		logger.Printf("Connection established with %s (node %d).\n",
 			address, i+1)
 		nodeConn := graphnet.NewNodeConn(conn, logger, dispatchTab)
-		nodeConn.Index = i+1
+		nodeConn.Index = i + 1
 		ncp.AddUnregistered(nodeConn)
 	}
 
@@ -85,14 +94,14 @@ func main() {
 		logger.Printf("Sending handshake to node %d\n", i+1)
 
 		// send node index and count to worker
-		buf[0] = byte(i+1)
-		buf[1] = byte(nWorkers+1)
+		buf[0] = byte(i + 1)
+		buf[1] = byte(nWorkers + 1)
 		nodeConn.WriteBytes(graphnet.MSG_NODE_INDEX_COUNT, buf[:2])
 
 		// send addresses of higher indexed nodes to node
 		for j := i + 1; j < len(addresses); j++ {
 			ipComponents := strings.Split(addresses[j], ":")
-			buf[0] = byte(j+1)
+			buf[0] = byte(j + 1)
 
 			copy(buf[1:5], net.ParseIP(ipComponents[0]))
 
@@ -105,18 +114,20 @@ func main() {
 		}
 	}
 
-	// TODO: wait for all handshakes to finish
-
-	// this shouldn't have any effect for the server, since all nodes were
-	// added in order
+	// make sure that nodes are in order; shouldn't really have an effect
+	// for the server
 	ncp.Register()
 
-	// TODO: send subgraphs
+	// TODO: stream subgraphs to files
+
+	// wait for all nodes to finish handshake
+	handshakeWg.Wait()
+	logger.Println("All nodes have completed handshake.")
 
 	// TODO: start coloring
 	// distributed.ColorDistributedServer()
 
-	// wait until all nodes finished; this will activate when nWorkers
+	// wait until all nodes finished coloring; this will activate when nWorkers
 	// MSG_NODE_FINISHED are received
 	wg.Wait()
 

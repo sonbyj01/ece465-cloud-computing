@@ -51,6 +51,9 @@ func main() {
 	// waitgroup for handshake completion: only frees once everything is set up
 	var setupWg sync.WaitGroup
 
+	// buf for messages
+	buf := make([]byte, 8)
+
 	// worker message handlers
 	dispatchTab := make(map[byte]graphnet.Dispatch)
 	dispatchTab[graphnet.MSG_VERTEX_INFO] = func(vertexInfo []byte,
@@ -155,10 +158,11 @@ func main() {
 		nodeIndexWg.Wait()
 	}
 
-	// wait for all handshake actions to complete
-	logger.Printf("Waiting for handshake to complete...\n")
+	// wait for all handshake actions to complete, send ack to server
 	setupWg.Wait()
 	logger.Printf("Handshake complete\n")
+	buf[0] = byte(ws.NodeIndex)
+	ws.ConnPool.Conns[0].WriteBytes(graphnet.MSG_ACK, buf[:1])
 
 	// reorder nodes so that they're in the correct order
 	ws.ConnPool.Register()
@@ -171,9 +175,8 @@ func main() {
 	//distributed.ColorDistributed()
 
 	// notify all of completion
-	buf := make([]byte, 1)
 	buf[0] = byte(ws.NodeIndex)
-	ws.ConnPool.Broadcast(graphnet.MSG_NODE_FINISHED, buf)
+	ws.ConnPool.Broadcast(graphnet.MSG_NODE_FINISHED, buf[:1])
 
 	logger.Printf("Done.")
 }

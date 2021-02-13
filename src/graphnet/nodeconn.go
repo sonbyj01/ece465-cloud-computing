@@ -7,9 +7,9 @@ import (
 	"net"
 )
 
-// NodeConnPool keeps track of all node connections in an array; they are
-// initially dumped in the unregistered list and moved to the correct index in
-// the registered array when their index is received
+// NodeConnPool is a managed list of NodeConn connections; NodeConn instances
+// are initially unordered "unregistered" as they are added, and "registering"
+// the NodeConnPool puts NodeConn instances in the correct location in the array
 type NodeConnPool struct {
 	Conns      []*NodeConn
 	Index      int
@@ -58,7 +58,7 @@ func (ncp *NodeConnPool) Broadcast(msgType byte, buf []byte) {
 	}
 
 	for _, nodeConn := range ncp.Conns {
-		if nodeConn != nil {
+		if nodeConn != nil && nodeConn.open {
 			nodeConn.WriteBytes(msgType, buf)
 		}
 	}
@@ -72,22 +72,10 @@ func (ncp *NodeConnPool) BroadcastWorkers(msgType byte, buf []byte) {
 	}
 
 	for i, nodeConn := range ncp.Conns {
-		if nodeConn != nil && i > 0 {
+		if nodeConn != nil && i > 0 && nodeConn.open {
 			nodeConn.WriteBytes(msgType, buf)
 		}
 	}
-}
-
-// Remove removes a node
-func (ncp *NodeConnPool) Remove(nodeIndex int) {
-	// ncp should be registered first, i.e., indices should be correct
-	if !ncp.registered {
-		panic("Unregistered NodeConnPool")
-	}
-
-	// close connection
-	ncp.Conns[nodeIndex].Close()
-	ncp.Conns[nodeIndex] = nil
 }
 
 // Dispatch is a callback that takes a fixed-length slice of bytes, and is
@@ -104,7 +92,7 @@ type NodeConn struct {
 	logger      *log.Logger
 	Index       int
 	dispatchTab map[byte]Dispatch
-	open		bool
+	open        bool
 }
 
 // Read listens on the connection's socket and outputs messages to the
