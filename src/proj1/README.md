@@ -1,4 +1,5 @@
 # ECE465 Project 1: Graph Coloring
+### Jonathan Lam & Henry Son
 
 ---
 
@@ -24,9 +25,30 @@ of the algorithms can be found in [Gebremedhin's thesis][gebre].
 
 ---
 
-### Build Instructions
+### Running Tests/Benchmarks
+All of the results are generated using the `go test` command. The driver for the
+tests and benchmarks are in `proj1_test.go`. The algorithms for this project
+are provided in the `graph`, `graphalgo/sequential`, and `graphalgo/parallel`
+packages.
 
-See [the parent README](../../README.md).
+To run tests, execute the following **from the top-level directory of
+the repo**:
+```bash
+GOPATH=$(pwd) go test ./src/proj1
+```
+To run benchmarks:
+```bash
+GOPATH=$(pwd) go test -bench=. ./src/proj1
+```
+To run a specific benchmark, put the name after the `-bench`. For example, to
+run the benchmarks for generating new random graphs in `src/proj1/proj1_test.go`
+(the `BenchmarkNewRandomGraph` and `BenchmarkNewRandomGraphParallel` functions):
+```bash
+GOPATH=$(pwd) go test -bench=NewRandomGraph* ./src/proj1
+```
+See `proj1_test.go` for available tests and benchmarks. See the
+[Golang documentation](https://golang.org/doc/) for more details on the
+build/run environment.
 
 ---
 
