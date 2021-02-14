@@ -128,8 +128,8 @@ type NodeConn struct {
 func (conn *NodeConn) Read() {
 	var buf []byte
 	for {
-		conn.logger.Printf("Buffered from %s: %d\n",
-			conn.conn.RemoteAddr().String(), conn.reader.Buffered())
+		//conn.logger.Printf("Buffered from %s: %d\n",
+		//	conn.conn.RemoteAddr().String(), conn.reader.Buffered())
 
 		b, err := conn.reader.ReadByte()
 		if err == io.EOF {
