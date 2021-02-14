@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// Print prints out a list of a graph's nodes and values, as well as their
+// Print prints out a list of a graph's vertices and values, as well as their
 // neighbors and values
 func (g *Graph) Print() {
 	for i := range g.Vertices {
@@ -17,6 +17,20 @@ func (g *Graph) Print() {
 			fmt.Printf("\t%d: %d\n", j, g.Vertices[j].Value)
 		}
 	}
+}
+
+// PrintSubgraph prints out a list of a graph's vertices (with an index offset)
+// and values, as well as their neighbors
+func (g *Graph) PrintSubgraph(offset int) string {
+	res := ""
+	for i := range g.Vertices {
+		res += fmt.Sprintf("%d: %d; ", i+offset, g.Vertices[i].Value)
+		for _, j := range g.Vertices[i].Adj {
+			res += fmt.Sprintf("%d, ", j)
+		}
+		res += "\n"
+	}
+	return res
 }
 
 // CheckValidColoring checks whether a graph is appropriately colored

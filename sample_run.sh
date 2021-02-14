@@ -15,6 +15,8 @@ pkill client_latest
 pkill server_latest
 rm -f $CONFIG_NODES_FILE
 
+sleep 0.25
+
 # write config nodes
 cat <<EOF >$CONFIG_NODES_FILE
 127.0.0.1:5000
@@ -30,7 +32,7 @@ target/client_latest --port 5002 &
 target/client_latest --port 5003 &
 
 # wait a little...
-sleep 0.5
+sleep 0.25
 
 # start server
 target/server_latest --config $CONFIG_NODES_FILE --graph $GRAPH_FILE &

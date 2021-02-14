@@ -19,11 +19,6 @@ import (
 func main() {
 	logger, logFile := common.CreateLogger("worker ", "color")
 	defer func() {
-		// catch any panic
-		if err := recover(); err != nil {
-			logger.Fatal(err)
-		}
-
 		// clean up logfile
 		err := logFile.Close()
 		if err != nil {
@@ -77,8 +72,8 @@ func main() {
 		color := int(binary.LittleEndian.Uint32(vertexInfo[:4]))
 		index := int(binary.LittleEndian.Uint32(vertexInfo[4:]))
 
-		// TODO: probably want to remove this
-		logger.Printf("Indexes %d have been updated to %d.",
+		// TODO: probably want to remove this at some point
+		logger.Printf("Vertex %d has been colored with %d.",
 			index, color)
 
 		ws.StoredMutex.Lock()
@@ -249,4 +244,8 @@ func main() {
 	distributed.ColorDistributed(ws, 10, runtime.NumCPU()*2, logger)
 
 	logger.Printf("Done.")
+
+	// hang around to prevent broken read/writes
+	setupWg.Add(1)
+	setupWg.Wait()
 }

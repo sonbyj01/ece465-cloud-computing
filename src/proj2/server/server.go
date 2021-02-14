@@ -20,11 +20,6 @@ func main() {
 	// create logger
 	logger, logFile := common.CreateLogger("server ", "color")
 	defer func() {
-		// catch any panic
-		if err := recover(); err != nil {
-			logger.Fatal(err)
-		}
-
 		// clean up logfile
 		err := logFile.Close()
 		if err != nil {

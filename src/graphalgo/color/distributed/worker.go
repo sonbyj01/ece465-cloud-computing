@@ -47,11 +47,11 @@ func colorSpeculative(u []int, maxColor int, ws *WorkerState) {
 				for _, k := range v.Adj {
 					if k >= iEnd {
 						binary.LittleEndian.PutUint32(buf[:4], uint32(j))
-						binary.LittleEndian.PutUint32(buf[4:], uint32(k))
+						binary.LittleEndian.PutUint32(buf[4:], uint32(i+iBegin))
 						// TODO: later work on buffering
 						ws.ConnPool.Conns[1+(k/len(sg.Vertices))].
 							WriteBytes(graphnet.MSG_VERTEX_INFO, buf,
-								false)
+								true)
 					}
 				}
 
@@ -109,6 +109,10 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 
 	// loop until u is empty
 	for len(u) > 0 {
+		// print subgraph
+		// TODO: remove; for testing
+		logger.Printf("\n%s\n", sg.PrintSubgraph(ws.VertexBegin))
+
 		// synchronizing the beginning of each step
 		logger.Printf("Synchronizing start of round...\n")
 		ws.AlgoStarted = true
@@ -126,7 +130,8 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 		// don't use supersteps, rather choose number of threads; channels
 		// will be buffered anyways
 		nVertices := len(u)
-		verticesPerThread := int(math.Ceil(float64(nVertices / nThreads)))
+		verticesPerThread := int(math.Ceil(float64(nVertices) /
+			float64(nThreads)))
 		ws.ColorWg.Add(nThreads)
 		for i := 0; i < nThreads; i++ {
 			start := i * verticesPerThread
@@ -140,6 +145,9 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 
 			go colorSpeculative(u[start:end], maxColor, ws)
 		}
+
+		// flush all write buffers
+		ws.ConnPool.FlushAll()
 
 		// when speculative coloring for this round is done, notify workers
 		buf[0] = byte(ws.NodeIndex)
@@ -176,4 +184,8 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 	// when done coloring, notify all nodes
 	buf[0] = byte(ws.NodeIndex)
 	ws.ConnPool.Broadcast(graphnet.MSG_NODE_FINISHED, buf[:1])
+
+	// print final graph
+	// TODO: remove
+	logger.Printf("Final graph:\n%s\n", sg.PrintSubgraph(ws.VertexBegin))
 }
