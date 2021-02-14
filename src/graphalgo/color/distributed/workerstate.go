@@ -14,18 +14,19 @@ type WorkerState struct {
 	VertexBegin int            // start of vertex range
 	VertexEnd   int            // end of vertex range
 	Stored      map[int]int    // received neighbor vertex values
+	StoredMutex sync.Mutex     // mutex for the above (TODO: make R/W lock?)
+	StartWg     sync.WaitGroup // WaitGroup for starting the round
 	ColorWg     sync.WaitGroup // WaitGroup for speculative coloring
 	DetectWg    sync.WaitGroup // WaitGroup for conflict detection
+	AlgoStarted bool
 	ConnPool    graphnet.NodeConnPool
 }
 
 // NewWorkerState initializes a new WorkerState
 func NewWorkerState() *WorkerState {
-	ws := WorkerState{}
-
-	// DetectWg is used as a lock to prevent ColorWg semaphore from being
-	// decremented before it is set; default is "locked"
-	ws.DetectWg.Add(1)
+	ws := WorkerState{
+		Stored: make(map[int]int),
+	}
 
 	return &ws
 }

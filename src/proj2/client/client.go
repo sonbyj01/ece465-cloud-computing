@@ -19,6 +19,12 @@ import (
 func main() {
 	logger, logFile := common.CreateLogger("worker ", "color")
 	defer func() {
+		// catch any panic
+		if err := recover(); err != nil {
+			logger.Fatal(err)
+		}
+
+		// clean up logfile
 		err := logFile.Close()
 		if err != nil {
 			logger.Fatal(err)
@@ -75,7 +81,9 @@ func main() {
 		logger.Printf("Indexes %d have been updated to %d.",
 			index, color)
 
+		ws.StoredMutex.Lock()
 		ws.Stored[index] = color
+		ws.StoredMutex.Unlock()
 	}
 	dispatchTab[graphnet.MSG_NODE_FINISHED] = func(nodeIndex []byte,
 		_ *graphnet.NodeConn) {
@@ -83,22 +91,27 @@ func main() {
 		logger.Printf("Node %d has finished processing.\n",
 			nodeIndex[0])
 
-		// decrease total number of nodes remaining in the pool;
-		// the timing of this (waiting for the DetectWg lock) means that it
-		// has already incremented the ColorWg semaphore
-		ws.DetectWg.Wait()
-		ws.ColorWg.Done()
+		// decrease total number of nodes remaining in the pool
+		ws.StartWg.Done()
 		ws.NodeCount--
 	}
 	dispatchTab[graphnet.MSG_NODE_ROUND_FINISHED] = func(nodeIndex []byte,
 		_ *graphnet.NodeConn) {
 
-		logger.Printf("Node %d has finished a round.\n",
+		logger.Printf("Node %d has finished a round.\n", nodeIndex[0])
+
+		// decrease the number of nodes we are waiting for
+		ws.ColorWg.Done()
+	}
+	dispatchTab[graphnet.MSG_NODE_ROUND_START] = func(nodeIndex []byte,
+		_ *graphnet.NodeConn) {
+
+		logger.Printf("Node %d is ready to begin a round.\n",
 			nodeIndex[0])
 
 		// decrease the number of nodes we are waiting for
-		ws.DetectWg.Wait()
-		ws.ColorWg.Done()
+		ws.ColorWg.Add(1)
+		ws.StartWg.Done()
 	}
 
 	// receive total number of nodes, begin listening for nodes to dial
@@ -126,6 +139,9 @@ func main() {
 
 		// set index of server to 0
 		nodeConn.Index = 0
+
+		// set start waitgroup so that it doesn't go negative
+		ws.StartWg.Add(ws.NodeCount - 2)
 	}
 
 	// receive address of higher-indexed node, dial it

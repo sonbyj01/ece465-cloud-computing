@@ -60,11 +60,6 @@ func (ncp *NodeConnPool) Broadcast(msgType byte, buf []byte) {
 	}
 
 	for _, nodeConn := range ncp.Conns {
-		// TODO: remove; for testing
-		//if nodeConn != nil {
-		//	log.Println("Broadcast message", msgType, nodeConn.open)
-		//}
-
 		if nodeConn != nil && nodeConn.open {
 			nodeConn.WriteBytes(msgType, buf, false)
 		}
@@ -132,8 +127,7 @@ func (conn *NodeConn) Read() {
 			conn.logger.Fatal(err)
 		}
 
-		// dispatch action
-		go conn.dispatchTab[b](buf, conn)
+		conn.dispatchTab[b](buf, conn)
 	}
 
 	conn.Close()

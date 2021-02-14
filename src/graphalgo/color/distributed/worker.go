@@ -28,7 +28,9 @@ func colorSpeculative(u []int, maxColor int, ws *WorkerState) {
 		// speculatively color
 		for _, j := range v.Adj {
 			if j < iBegin || j >= iEnd {
+				ws.StoredMutex.Lock()
 				color = ws.Stored[j]
+				ws.StoredMutex.Unlock()
 			} else {
 				color = sg.Vertices[j-iBegin].Value
 			}
@@ -76,7 +78,9 @@ func resolveConflicts(u []int, ws *WorkerState, r *[]int) {
 			if j >= iBegin && j < iEnd {
 				color = sg.Vertices[j-iBegin].Value
 			} else {
+				ws.StoredMutex.Lock()
 				color = ws.Stored[j]
+				ws.StoredMutex.Unlock()
 			}
 
 			// if conflict detected, set larger-indexed node to be recolored
@@ -103,12 +107,16 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 
 	r := make([]int, 0)
 
-	// listen on socket (async) until all vertex information received
-	ws.ColorWg.Add(ws.NodeCount - 1)
-	ws.DetectWg.Done()
-
 	// loop until u is empty
 	for len(u) > 0 {
+		// synchronizing the beginning of each step
+		logger.Printf("Synchronizing start of round...\n")
+		ws.AlgoStarted = true
+		ws.ConnPool.BroadcastWorkers(graphnet.MSG_NODE_ROUND_START,
+			[]byte{byte(ws.NodeIndex)})
+		ws.StartWg.Wait()
+		ws.StartWg.Add(ws.NodeCount - 2)
+
 		logger.Printf("Beginning new round: %d vertices to be colored\n",
 			len(u))
 
@@ -158,15 +166,7 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 
 			go resolveConflicts(u[start:end], ws, &r)
 		}
-
-		// begin listen on socket (async) until all vertex information received;
-		// this is here because synchronization relies on ws.DetectWg in case
-		// a node finishes (see MSG_NODE_FINISHED handler)
-		ws.ColorWg.Add(ws.NodeCount - 1)
 		ws.DetectWg.Wait()
-
-		// used as a lock to prevent decrementing ColorWg before it's set
-		ws.DetectWg.Add(1)
 
 		// set U to R
 		u = r

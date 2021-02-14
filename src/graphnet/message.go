@@ -10,6 +10,8 @@ const (
 	MSG_BEGIN_COLORING = byte(iota)
 	// MSG_VERTEX_INFO for exchanging neighbor vertex info
 	MSG_VERTEX_INFO = byte(iota)
+	// MSG_NODE_ROUND_START for synchronizing the start of rounds
+	MSG_NODE_ROUND_START = byte(iota)
 	// MSG_NODE_FINISHED when node completely finished coloring
 	MSG_NODE_FINISHED = byte(iota)
 	// MSG_NODE_ROUND_FINISHED when node finished one coloring round
@@ -48,6 +50,7 @@ var NUM_BYTES_MAP = map[byte]int{
 	MSG_NODE_ADDRESS:        7,  // 0: node index, 1-4: ipv4 address, 5-6 port
 	MSG_DIALER_INDEX:        1,  // 0: incoming node index
 	MSG_SUBGRAPH:            -1, // variable length string until DELIM_EOF
+	MSG_NODE_ROUND_START:    1,  // 0: node index
 }
 
 // DELIM_EOF is used to indicate end of string; null byte is used arbitrarily
