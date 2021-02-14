@@ -23,6 +23,8 @@ Usage: make [COMMAND], where COMMAND is one of the following:
         run-server: run server (build if necessary)
         run-client: run client (build if necessary)
         clean: clean built files
+        logclear: clear logfiles
+        refresh: runs targets clean logclear server client
 ```
 The first two commands will build target files to [`target`](../../target).
 Namely, it will build an executable to `target/server_{VERSION}` or
@@ -35,6 +37,21 @@ The `run-server` and `run-client` commands invoke `target/server_latest` or
 `target/client_latest` with default parameters. Again, this is for convenience
 and will likely not be the case -- if you need custom parameters, run the
 built executables in the `target` directory.
+
+##### Sample Run
+To run multiple clients on the same device, you can use the
+[`sample_run.sh`](../../sample_run.sh) located in the top-level directory.
+Sample usage (from the top-level directory of this repo):
+```bash
+$ make refresh && ./sample_run res/sample10.graph
+```
+
+**Note for submission 2a**: The algorithm is still a little buggy and you may
+have to run this a few times to get a clean output. If the algorithm does not
+cleanly terminate (e.g., in the case of a short write), you may also want to run
+```bash
+$ pkill client_latest;pkill server_latest
+```
 
 ---
 
@@ -81,11 +98,6 @@ attempts to make a handshake with each worker node, after which it sends
 information about the other nodes so that they can each create peer-to-peer
 nodes amongst themselves (the graph of worker nodes forms a complete graph).
 
-(Note about revision 1: We were not able to implement the Server-Worker
-handshake in the manner described above. A simplified version, where each
-worker is given the `*.nodes` configuration file, is used instead for this
-revision.)
-
 ##### Distributing the Graph
 The graph is read in from a file on the server, and partitioned into
 subgraphs comprising vertices with adjacent indices. (This is the simplest
@@ -125,13 +137,47 @@ proper coloring.
 
 ---
 
-### Results
+### Progress & Results
 
-<!-- TODO -->
+##### Project 2(a) -- Handshake complete, algorithm prone to race conditions
+We were able to implement the handshake successfully, but encountered multiple
+bugs when actually implementing the distributed algorithm. These bugs
+are related to race conditions (e.g., negative WaitGroup counters) and
+a short write condition.
+
+Currently, the binary is very buggy and may take a few runs until it doesn't
+cause panics due to these bugs. You can try to build using the sample
+instructions listed above but it may take 4-5 tries to get a suitable output.
+A sample output when it does work correctly, for comparison purposes, can be
+found at [`res/sample10.log`](../../res/sample10.log). This colored the graph
+as follows (see graph file format):
+```text
+10
+0:2;1,9,7
+1:1;0,8,4
+2:1;6
+3:1;4
+4:2;1,3
+5:1;8,7
+6:0;2
+7:3;8,0,5
+8:0;1,5,7
+9:1;0
+```
+It is easy to verify that this coloring is correct.
+
+Our main goal for the second iteration is to get this working, and if possible,
+to measure the speedup this achieves over sequential operation and single-node,
+multithread operation (if applicable). Since the handshake works properly, this
+will probably mean rewriting most of the algorithm with very thorough testing
+to eliminate the race conditions and the short write condition.
 
 ---
 
 ### Future Work
+The first order of business is to fix bugs in the algorithm. See the above
+section.
+
 Gebremedhin et al. (2005) achieved almost linear speedups.
 The goal for the second revision of this project is to provide further
 optimization to achieve a better theoretical result. There are many

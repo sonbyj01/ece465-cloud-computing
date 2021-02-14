@@ -107,8 +107,8 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 
 	r := make([]int, 0)
 
-	// loop until u is empty
-	for len(u) > 0 {
+	// loop until u is empty (see break condition)
+	for {
 		// print subgraph
 		// TODO: remove; for testing
 		logger.Printf("\n%s\n", sg.PrintSubgraph(ws.VertexBegin))
@@ -175,6 +175,12 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 			go resolveConflicts(u[start:end], ws, &r)
 		}
 		ws.DetectWg.Wait()
+
+		// if u and r are both empty (i.e., empty for two rounds in a row,
+		// then break
+		if len(u) == 0 && len(r) == 0 {
+			break
+		}
 
 		// set U to R
 		u = r
