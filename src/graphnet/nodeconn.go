@@ -30,7 +30,7 @@ func (ncp *NodeConnPool) AddUnregistered(conn *NodeConn) {
 // after they have all received their indices
 func (ncp *NodeConnPool) Register() {
 	orderedPool := make([]*NodeConn, len(ncp.Conns)+1)
-	var index int
+	var index = -1
 
 	for _, conn := range ncp.Conns {
 		orderedPool[conn.Index] = conn
@@ -40,8 +40,10 @@ func (ncp *NodeConnPool) Register() {
 	// nil connection, all other connections should be properly filled)
 	for i, conn := range orderedPool {
 		if conn == nil {
+			if index != -1 {
+				panic("Missing connections in NodeConnPool")
+			}
 			index = i
-			break
 		}
 	}
 
@@ -58,6 +60,11 @@ func (ncp *NodeConnPool) Broadcast(msgType byte, buf []byte) {
 	}
 
 	for _, nodeConn := range ncp.Conns {
+		// TODO: remove; for testing
+		//if nodeConn != nil {
+		//	log.Println("Broadcast message", msgType, nodeConn.open)
+		//}
+
 		if nodeConn != nil && nodeConn.open {
 			nodeConn.WriteBytes(msgType, buf, false)
 		}

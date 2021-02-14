@@ -105,6 +105,7 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 
 	// listen on socket (async) until all vertex information received
 	ws.ColorWg.Add(ws.NodeCount - 1)
+	ws.DetectWg.Done()
 
 	// loop until u is empty
 	for len(u) > 0 {
@@ -163,6 +164,9 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 		// a node finishes (see MSG_NODE_FINISHED handler)
 		ws.ColorWg.Add(ws.NodeCount - 1)
 		ws.DetectWg.Wait()
+
+		// used as a lock to prevent decrementing ColorWg before it's set
+		ws.DetectWg.Add(1)
 
 		// set U to R
 		u = r

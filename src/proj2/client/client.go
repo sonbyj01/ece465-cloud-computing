@@ -17,7 +17,7 @@ import (
 
 // main is the driver to be built into the executable for the client
 func main() {
-	logger, logFile := common.CreateLogger("worker")
+	logger, logFile := common.CreateLogger("worker ", "color")
 	defer func() {
 		err := logFile.Close()
 		if err != nil {
@@ -46,7 +46,7 @@ func main() {
 	}()
 
 	// this stores algorithm state
-	var ws distributed.WorkerState
+	ws := distributed.NewWorkerState()
 
 	// waitgroup to wait on getting node index
 	var nodeIndexWg sync.WaitGroup
@@ -54,6 +54,11 @@ func main() {
 	// waitgroup for handshake completion: only frees once all handshake
 	// actions are set up (handshake doesn't include sending subgraph)
 	var setupWg sync.WaitGroup
+
+	// waitgroup to begin coloring; needs to be unlocked by start signal
+	// being sent by server and subgraph being totally received and processed
+	var startColoringWg sync.WaitGroup
+	startColoringWg.Add(2)
 
 	// buf for messages
 	buf := make([]byte, 8)
@@ -92,6 +97,7 @@ func main() {
 			nodeIndex[0])
 
 		// decrease the number of nodes we are waiting for
+		ws.DetectWg.Wait()
 		ws.ColorWg.Done()
 	}
 
@@ -105,7 +111,7 @@ func main() {
 		defer nodeIndexWg.Done()
 
 		// update logger prefix
-		logger.SetPrefix(fmt.Sprintf("worker %d: ", indexCount[0]))
+		logger.SetPrefix(fmt.Sprintf("worker%d:\t", indexCount[0]))
 
 		logger.Printf("Got node index %d, %d total nodes.",
 			indexCount[0], indexCount[1])
@@ -159,14 +165,11 @@ func main() {
 		nodeConn.Index = int(nodeIndex[0])
 	}
 
-	// receive subgraph, and create lock that waits until subgraph is fully
-	// received and processed
-	var subgraphWg sync.WaitGroup
-	subgraphWg.Add(1)
+	// receive subgraph
 	dispatchTab[graphnet.MSG_SUBGRAPH] = func(buf []byte,
 		_ *graphnet.NodeConn) {
 
-		defer subgraphWg.Done()
+		defer startColoringWg.Done()
 		logger.Printf("Receiving subgraph...\n")
 		ws.Subgraph, err = graph.Load(bytes.NewReader(buf))
 		if err != nil {
@@ -185,13 +188,8 @@ func main() {
 	dispatchTab[graphnet.MSG_BEGIN_COLORING] = func(_ []byte,
 		_ *graphnet.NodeConn) {
 
-		subgraphWg.Wait()
-
-		logger.Printf("Beginning coloring...\n")
-		distributed.ColorDistributed(&ws, 10, runtime.NumCPU()*2,
-			logger)
-
-		logger.Printf("Done.")
+		logger.Println("Received signal to begin coloring.")
+		startColoringWg.Done()
 	}
 
 	// begin listening; expecting NodeIndex incoming dials (one from server,
@@ -212,6 +210,14 @@ func main() {
 		nodeIndexWg.Wait()
 	}
 
+	// wait for all handshake tasks to complete, send ack to server
+	logger.Println("Waiting on setupWg...")
+	setupWg.Wait()
+	logger.Printf("Handshake complete\n")
+	buf[0] = byte(ws.NodeIndex)
+	ws.ConnPool.Conns[0].WriteBytes(graphnet.MSG_HANDSHAKE_DONE, buf[:1],
+		false)
+
 	// reorder nodes so that they're in the correct order
 	ws.ConnPool.Register()
 	if ws.ConnPool.Index != ws.NodeIndex {
@@ -220,10 +226,11 @@ func main() {
 			"should match. %d != %d\n", ws.ConnPool.Index, ws.NodeIndex)
 	}
 
-	// wait for all handshake tasks to complete, send ack to server
-	setupWg.Wait()
-	logger.Printf("Handshake complete\n")
-	buf[0] = byte(ws.NodeIndex)
-	ws.ConnPool.Conns[0].WriteBytes(graphnet.MSG_HANDSHAKE_DONE, buf[:1],
-		false)
+	// begin coloring
+	logger.Println("Waiting on startColoringWg...")
+	startColoringWg.Wait()
+	logger.Printf("Beginning coloring...\n")
+	distributed.ColorDistributed(ws, 10, runtime.NumCPU()*2, logger)
+
+	logger.Printf("Done.")
 }

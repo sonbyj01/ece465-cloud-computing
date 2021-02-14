@@ -18,3 +18,14 @@ type WorkerState struct {
 	DetectWg    sync.WaitGroup // WaitGroup for conflict detection
 	ConnPool    graphnet.NodeConnPool
 }
+
+// NewWorkerState initializes a new WorkerState
+func NewWorkerState() *WorkerState {
+	ws := WorkerState{}
+
+	// DetectWg is used as a lock to prevent ColorWg semaphore from being
+	// decremented before it is set; default is "locked"
+	ws.DetectWg.Add(1)
+
+	return &ws
+}

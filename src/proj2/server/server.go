@@ -18,7 +18,7 @@ import (
 // main is the driver to be built into the executable for the server
 func main() {
 	// create logger
-	logger, logFile := common.CreateLogger("server")
+	logger, logFile := common.CreateLogger("server ", "color")
 	defer func() {
 		err := logFile.Close()
 		if err != nil {
