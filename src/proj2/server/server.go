@@ -63,7 +63,9 @@ func main() {
 	// handshake
 	var handshakeWg sync.WaitGroup
 	handshakeWg.Add(nWorkers)
-	dispatchTab[graphnet.MSG_ACK] = func(buf []byte, _ *graphnet.NodeConn) {
+	dispatchTab[graphnet.MSG_HANDSHAKE_DONE] = func(buf []byte,
+		_ *graphnet.NodeConn) {
+
 		handshakeWg.Done()
 		logger.Printf("Node %d has completed handshake.\n", buf[0])
 	}
@@ -171,8 +173,8 @@ func main() {
 	handshakeWg.Wait()
 	logger.Println("All nodes have completed handshake.")
 
-	// TODO: start coloring
-	// distributed.ColorDistributedServer()
+	// send signal to start coloring
+	ncp.Broadcast(graphnet.MSG_BEGIN_COLORING, buf[:0])
 
 	// wait until all nodes finished coloring; this will activate when nWorkers
 	// MSG_NODE_FINISHED are received

@@ -10,6 +10,7 @@ import (
 	"graphnet"
 	"net"
 	"proj2/common"
+	"runtime"
 	"strconv"
 	"sync"
 )
@@ -50,7 +51,8 @@ func main() {
 	// waitgroup to wait on getting node index
 	var nodeIndexWg sync.WaitGroup
 
-	// waitgroup for handshake completion: only frees once everything is set up
+	// waitgroup for handshake completion: only frees once all handshake
+	// actions are set up (handshake doesn't include sending subgraph)
 	var setupWg sync.WaitGroup
 
 	// buf for messages
@@ -61,21 +63,36 @@ func main() {
 	dispatchTab[graphnet.MSG_VERTEX_INFO] = func(vertexInfo []byte,
 		_ *graphnet.NodeConn) {
 
+		color := int(binary.LittleEndian.Uint32(vertexInfo[:4]))
+		index := int(binary.LittleEndian.Uint32(vertexInfo[4:]))
+
+		// TODO: probably want to remove this
 		logger.Printf("Indexes %d have been updated to %d.",
-			binary.LittleEndian.Uint32(vertexInfo[4:]),
-			binary.LittleEndian.Uint32(vertexInfo[:4]))
+			index, color)
+
+		ws.Stored[index] = color
 	}
 	dispatchTab[graphnet.MSG_NODE_FINISHED] = func(nodeIndex []byte,
 		_ *graphnet.NodeConn) {
 
 		logger.Printf("Node %d has finished processing.\n",
 			nodeIndex[0])
+
+		// decrease total number of nodes remaining in the pool;
+		// the timing of this (waiting for the DetectWg lock) means that it
+		// has already incremented the ColorWg semaphore
+		ws.DetectWg.Wait()
+		ws.ColorWg.Done()
+		ws.NodeCount--
 	}
 	dispatchTab[graphnet.MSG_NODE_ROUND_FINISHED] = func(nodeIndex []byte,
 		_ *graphnet.NodeConn) {
 
 		logger.Printf("Node %d has finished a round.\n",
 			nodeIndex[0])
+
+		// decrease the number of nodes we are waiting for
+		ws.ColorWg.Done()
 	}
 
 	// receive total number of nodes, begin listening for nodes to dial
@@ -142,16 +159,39 @@ func main() {
 		nodeConn.Index = int(nodeIndex[0])
 	}
 
-	// receive subgraph
+	// receive subgraph, and create lock that waits until subgraph is fully
+	// received and processed
+	var subgraphWg sync.WaitGroup
+	subgraphWg.Add(1)
 	dispatchTab[graphnet.MSG_SUBGRAPH] = func(buf []byte,
 		_ *graphnet.NodeConn) {
 
+		defer subgraphWg.Done()
 		logger.Printf("Receiving subgraph...\n")
 		ws.Subgraph, err = graph.Load(bytes.NewReader(buf))
 		if err != nil {
 			logger.Fatal(err)
 		}
-		logger.Printf("Finished receiving subgraph.\n")
+
+		// calculate start, end vertices
+		nodeIndexWg.Wait()
+		ws.VertexBegin = (ws.NodeIndex - 1) * len(ws.Subgraph.Vertices)
+		ws.VertexEnd = ws.VertexBegin + len(ws.Subgraph.Vertices)
+		logger.Printf("Finished receiving subgraph (vertices %d-%d).\n",
+			ws.VertexBegin, ws.VertexEnd-1)
+	}
+
+	// start coloring
+	dispatchTab[graphnet.MSG_BEGIN_COLORING] = func(_ []byte,
+		_ *graphnet.NodeConn) {
+
+		subgraphWg.Wait()
+
+		logger.Printf("Beginning coloring...\n")
+		distributed.ColorDistributed(&ws, 10, runtime.NumCPU()*2,
+			logger)
+
+		logger.Printf("Done.")
 	}
 
 	// begin listening; expecting NodeIndex incoming dials (one from server,
@@ -161,7 +201,7 @@ func main() {
 		if err != nil {
 			logger.Fatal(err)
 		}
-		logger.Printf("Accepted incoming connection %s <- %s\n",
+		logger.Printf("Accepted incoming connection %s<-%s\n",
 			conn.LocalAddr().String(), conn.RemoteAddr().String())
 
 		nodeConn := graphnet.NewNodeConn(conn, logger, dispatchTab)
@@ -172,25 +212,18 @@ func main() {
 		nodeIndexWg.Wait()
 	}
 
-	// wait for all handshake actions to complete, send ack to server
-	setupWg.Wait()
-	logger.Printf("Handshake complete\n")
-	buf[0] = byte(ws.NodeIndex)
-	ws.ConnPool.Conns[0].WriteBytes(graphnet.MSG_ACK, buf[:1], false)
-
 	// reorder nodes so that they're in the correct order
 	ws.ConnPool.Register()
 	if ws.ConnPool.Index != ws.NodeIndex {
 		// just an extra check: these two values should be redundant
-		logger.Fatal("ncpIndex and state.NodeIndex should match")
+		logger.Fatalf("Connection pool index and state NodeIndex "+
+			"should match. %d != %d\n", ws.ConnPool.Index, ws.NodeIndex)
 	}
 
-	// start coloring
-	//distributed.ColorDistributed()
-
-	// notify all of completion
+	// wait for all handshake tasks to complete, send ack to server
+	setupWg.Wait()
+	logger.Printf("Handshake complete\n")
 	buf[0] = byte(ws.NodeIndex)
-	ws.ConnPool.Broadcast(graphnet.MSG_NODE_FINISHED, buf[:1])
-
-	logger.Printf("Done.")
+	ws.ConnPool.Conns[0].WriteBytes(graphnet.MSG_HANDSHAKE_DONE, buf[:1],
+		false)
 }
