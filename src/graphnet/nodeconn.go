@@ -5,7 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
-	"time"
+	"sync"
 )
 
 // NodeConnPool is a managed list of NodeConn connections; NodeConn instances
@@ -90,17 +90,11 @@ func (ncp *NodeConnPool) FlushAll() {
 
 	for _, nodeConn := range ncp.Conns {
 		if nodeConn != nil && nodeConn.open {
-			for err := nodeConn.writer.Flush(); err != nil; {
-				if err.Error() != "short write" {
-					panic(err)
-				}
-
-				// sleep for a little and try again
-				nodeConn.logger.Printf("0 Short write when flushing, "+
-					"sleeping and then trying again... %s->%s\n",
-					nodeConn.conn.LocalAddr().String(),
-					nodeConn.conn.RemoteAddr().String())
-				time.Sleep(100 * time.Millisecond)
+			nodeConn.writerMutex.Lock()
+			err := nodeConn.writer.Flush()
+			nodeConn.writerMutex.Unlock()
+			if err != nil {
+				nodeConn.logger.Fatal(err)
 			}
 		}
 	}
@@ -121,6 +115,7 @@ type NodeConn struct {
 	Index       int
 	dispatchTab map[byte]Dispatch
 	open        bool
+	writerMutex sync.Mutex
 }
 
 // Read listens on the connection's socket and outputs messages to the
@@ -171,67 +166,32 @@ func (conn *NodeConn) WriteBytes(messageType byte, buffer []byte,
 		return
 	}
 
+	// begin critical section: bufio write functions are not concurrent-safe
+	conn.writerMutex.Lock()
+
 	// send message type if this is not a continuation
 	if messageType != MSG_CONT {
-		for err := conn.writer.WriteByte(messageType); err != nil; {
-			if err.Error() != "short write" {
-				panic(err)
-			}
-
-			// sleep for a little and try again
-			conn.logger.Printf("1 Short write when flushing, "+
-				"sleeping and then trying again... %s->%s\n",
-				conn.conn.LocalAddr().String(),
-				conn.conn.RemoteAddr().String())
-			time.Sleep(100 * time.Millisecond)
+		err := conn.writer.WriteByte(messageType)
+		if err != nil {
+			conn.logger.Fatal(err)
 		}
-		//err := conn.writer.WriteByte(messageType)
-		//if err != nil {
-		//	conn.logger.Println("amsdklasmdlm")
-		//	conn.logger.Fatal(err)
-		//}
 	}
 
 	// write buffer
-	for _, err := conn.writer.Write(buffer); err != nil; {
-		if err.Error() != "short write" {
-			panic(err)
-		}
-
-		//buffer = buffer[n:]
-		// sleep for a little and try again
-		conn.logger.Printf("2 Short write when flushing, "+
-			"sleeping and then trying again... %s->%s\n",
-			conn.conn.LocalAddr().String(),
-			conn.conn.RemoteAddr().String())
-		time.Sleep(100 * time.Millisecond)
+	n, err := conn.writer.Write(buffer)
+	if n != len(buffer) || err != nil {
+		conn.logger.Fatal(err)
 	}
-	//n, err := conn.writer.Write(buffer)
-	//if n != len(buffer) || err != nil {
-	//	conn.logger.Println("TESTING # $")
-	//	conn.logger.Fatal(err)
-	//}
 
 	// flush if not buffered
 	if !buffered {
-		for err := conn.writer.Flush(); err != nil; {
-			if err.Error() != "short write" {
-				panic(err)
-			}
-
-			// sleep for a little and try again
-			conn.logger.Printf("3 Short write when flushing, "+
-				"sleeping and then trying again... %s->%s\n",
-				conn.conn.LocalAddr().String(),
-				conn.conn.RemoteAddr().String())
-			time.Sleep(100 * time.Millisecond)
+		err = conn.writer.Flush()
+		if err != nil {
+			conn.logger.Fatal(err)
 		}
-		//err = conn.writer.Flush()
-		//if err != nil {
-		//	conn.logger.Println("TESTING 1 2 3 4")
-		//	conn.logger.Fatal(err)
-		//}
 	}
+
+	conn.writerMutex.Unlock()
 }
 
 // Close closes the NodeConn's connection
