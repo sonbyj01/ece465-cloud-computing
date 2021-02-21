@@ -174,45 +174,15 @@ to eliminate the race conditions and the short write condition.
 
 ---
 
-### Future Work
-The first order of business is to fix bugs in the algorithm. See the above
-section.
+### Project 2b
+For checkpoint 2b, the first order of business was to fix the bugs in 2a, so
+that the algorithm runs reliably. Unfortunately, that did not leave much time
+for optimizations or deploying to AWS, which will be for future assignments.
 
-Gebremedhin et al. (2005) achieved almost linear speedups.
-The goal for the second revision of this project is to provide further
-optimization to achieve a better theoretical result. There are many
-directions we can explore for the second
-revision, e.g., switching away from the most trivial first-fit (FF) color-choice
-algorithm, adjusting buffering sizes, optimizing datatype sizes.
-
-What would most
-likely cause the largest difference in results is to choose a real-world graph
-that is well-partitioned (i.e., so that a good partitioning greatly reduces
-the number of inter-node edges from the uniform case), as well as the
-partitioning. Gebremedhin et al. (2005) use a real-world graph and the METIS
-graph partitioning tool. Since graph partitioning (to minimize cross-edges)
-is a NP-hard problem, we would also likely use a tool like this; however,
-there is no implementation of METIS for Golang, so we would have to use another
-tool (or pre-process the graph before use in Golang).
-
-Other optimizations may be on the network stack, since the networking is
-relatively primitive. We use raw TCP sockets and channels with `gob`-ed data
-(i.e., "serialized" similar to Python's pickle), and send data over slices --
-it may be faster to send simpler fixed-size packets of a reasonable buffer size
-to improve performance.
-
-We also need to continue working on our tooling. For now, we have a very basic
-outline in [`automate_start.sh`](../../automate_start.sh) to automate the
-process of distributing config files and start the clients and server. There
-are also a lot of missing utilities simply due to the fact that we didn't finish
-everything on time, such as reconstituting and checking the graph on the server
-on completion, etc.
-
-Also, some general housekeeping items that we ran out of time to do for the
-first revision:
-- Unit tests
-- Code cleanup and commenting to please `golint src/**`
+A full write-up for 2b, as well as general documentation and visuals on the
+distributed algorithm, can be found [here][2bdoc].
 
 
 [gam2000]: http://www.ii.uib.no/~fredrikm/fredrik/papers/Concurrency2000.pdf
 [gam2005]: https://cscapes.cs.purdue.edu/coloringpage/abstracts/euro05.pdf
+[2bdoc]: http://files.lambdalambda.ninja/reports/20-21_spring/ece465_proj2b.lam_son.pdf
