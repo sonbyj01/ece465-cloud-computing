@@ -17,22 +17,27 @@ import (
 
 // main is the driver to be built into the executable for the server
 func main() {
-	// create logger
-	logger, logFile := common.CreateLogger("server ", "color")
-	defer func() {
-		// clean up logfile
-		err := logFile.Close()
-		if err != nil {
-			logger.Fatal(err)
-		}
-	}()
-
 	// Takes in command line flag(s)
 	configFile := flag.String("config", "",
 		"Node addresses file")
 	graphFile := flag.String("graph", "",
 		"Graph description file")
+	quiet := flag.Bool("quiet", false, "Disable logging")
 	flag.Parse()
+
+	// create logger
+	logger, logFile := common.CreateLogger("server ", "color",
+		*quiet)
+	if !*quiet {
+		defer func() {
+			// clean up logfile
+			err := logFile.Close()
+			if err != nil {
+				logger.Fatal(err)
+			}
+		}()
+	}
+
 	if *configFile == "" {
 		logger.Fatal("No configuration file.")
 	}

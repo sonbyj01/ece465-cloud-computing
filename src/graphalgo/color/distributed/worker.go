@@ -104,22 +104,22 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 	for i := 0; i < len(sg.Vertices); i++ {
 		u[i] = i
 	}
-
 	r := make([]int, 0)
 
 	// loop until u is empty (see break condition)
-	for {
-		// print subgraph
-		// TODO: remove; for testing
-		logger.Printf("\n%s\n", sg.PrintSubgraph(ws.VertexBegin))
-
+	for len(u) > 0 {
 		// synchronizing the beginning of each step
 		logger.Printf("Synchronizing start of round...\n")
-		ws.AlgoStarted = true
 		ws.ConnPool.BroadcastWorkers(graphnet.MSG_NODE_ROUND_START,
 			[]byte{byte(ws.NodeIndex)})
 		ws.StartWg.Wait()
 		ws.StartWg.Add(ws.NodeCount - 2)
+
+		// special care taken here due to potential race condition; see
+		// documentation
+		ws.ColorWgLock.Lock()
+		ws.ColorWg.Add(ws.NodeCount - 2)
+		ws.ColorWgLock.Unlock()
 
 		logger.Printf("Beginning new round: %d vertices to be colored\n",
 			len(u))
@@ -176,12 +176,6 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 		}
 		ws.DetectWg.Wait()
 
-		// if u and r are both empty (i.e., empty for two rounds in a row,
-		// then break
-		if len(u) == 0 && len(r) == 0 {
-			break
-		}
-
 		// set U to R
 		u = r
 		r = u[:0]
@@ -190,8 +184,4 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 	// when done coloring, notify all nodes
 	buf[0] = byte(ws.NodeIndex)
 	ws.ConnPool.Broadcast(graphnet.MSG_NODE_FINISHED, buf[:1])
-
-	// print final graph
-	// TODO: remove
-	logger.Printf("Final graph:\n%s\n", sg.PrintSubgraph(ws.VertexBegin))
 }

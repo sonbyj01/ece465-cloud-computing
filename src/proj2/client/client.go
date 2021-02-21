@@ -17,18 +17,27 @@ import (
 
 // main is the driver to be built into the executable for the client
 func main() {
-	logger, logFile := common.CreateLogger("worker ", "color")
-	defer func() {
-		// clean up logfile
-		err := logFile.Close()
-		if err != nil {
-			logger.Fatal(err)
-		}
-	}()
+	// disable logger if quiet
+	quiet := flag.Bool("quiet", false, "Disable logs")
 
 	// get port number to listen on
 	port := flag.Int("port", 0, "Port to listen on")
+
 	flag.Parse()
+
+	// set up logger
+	logger, logFile := common.CreateLogger("worker ", "color",
+		*quiet)
+	if !*quiet {
+		defer func() {
+			// clean up logfile
+			err := logFile.Close()
+			if err != nil {
+				logger.Fatal(err)
+			}
+		}()
+	}
+
 	if *port == 0 {
 		panic("No port specified")
 	}
@@ -83,6 +92,11 @@ func main() {
 	dispatchTab[graphnet.MSG_NODE_FINISHED] = func(nodeIndex []byte,
 		_ *graphnet.NodeConn) {
 
+		// nothing to do
+		if ws.State == distributed.STATE_FINISHED {
+			return
+		}
+
 		logger.Printf("Node %d has finished processing.\n",
 			nodeIndex[0])
 
@@ -93,19 +107,54 @@ func main() {
 	dispatchTab[graphnet.MSG_NODE_ROUND_FINISHED] = func(nodeIndex []byte,
 		_ *graphnet.NodeConn) {
 
+		// recursive error recovery "trick" -- see documentation
+		var retry func()
+		retry = func() {
+			// consume error; keep retrying until success
+			if err := recover(); err != nil {
+
+				// if this happens, then lock already acquired
+				ws.ColorWg.Add(1)
+				ws.ColorWgLock.Unlock()
+
+				// algorithm is done, don't need to continue listening
+				if ws.State == distributed.STATE_FINISHED {
+					return
+				}
+
+				defer retry()
+
+				// give control to someone else (hopefully the main worker
+				// thread)
+				runtime.Gosched()
+
+				// retry
+				ws.ColorWgLock.Lock()
+				ws.ColorWg.Done()
+				ws.ColorWgLock.Unlock()
+			}
+		}
+		defer retry()
+
 		logger.Printf("Node %d has finished a round.\n", nodeIndex[0])
 
 		// decrease the number of nodes we are waiting for
+		ws.ColorWgLock.Lock()
 		ws.ColorWg.Done()
+		ws.ColorWgLock.Unlock()
 	}
 	dispatchTab[graphnet.MSG_NODE_ROUND_START] = func(nodeIndex []byte,
 		_ *graphnet.NodeConn) {
+
+		// nothing to do
+		if ws.State == distributed.STATE_FINISHED {
+			return
+		}
 
 		logger.Printf("Node %d is ready to begin a round.\n",
 			nodeIndex[0])
 
 		// decrease the number of nodes we are waiting for
-		ws.ColorWg.Add(1)
 		ws.StartWg.Done()
 	}
 
@@ -241,8 +290,10 @@ func main() {
 	logger.Println("Waiting on startColoringWg...")
 	startColoringWg.Wait()
 	logger.Printf("Beginning coloring...\n")
-	distributed.ColorDistributed(ws, 10, runtime.NumCPU()*2, logger)
 
+	ws.State = distributed.STATE_RUNNING
+	distributed.ColorDistributed(ws, 10000, runtime.NumCPU()*2, logger)
+	ws.State = distributed.STATE_FINISHED
 	logger.Printf("Done.")
 
 	// hang around to prevent broken read/writes

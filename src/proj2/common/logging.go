@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -10,7 +11,13 @@ import (
 // CreateLogger returns a new logger instance for the client or server;
 // user should indicate who the log is for, e.g., "client" or "server",
 // and logName is used for the filename
-func CreateLogger(user, logName string) (*log.Logger, *os.File) {
+func CreateLogger(user, logName string, quiet bool) (*log.Logger, *os.File) {
+	// mock logger if quiet mode
+	if quiet {
+		return log.New(ioutil.Discard, "", 0), nil
+	}
+
+	// real logger
 	curTime := time.Now().Format("20060102-1504")
 	logFile, err := os.OpenFile(fmt.Sprintf("logs/%s_%s.log",
 		logName, curTime), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
