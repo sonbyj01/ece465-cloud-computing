@@ -17,18 +17,27 @@ import (
 
 // main is the driver to be built into the executable for the client
 func main() {
-	logger, logFile := common.CreateLogger("worker ", "color")
-	defer func() {
-		// clean up logfile
-		err := logFile.Close()
-		if err != nil {
-			logger.Fatal(err)
-		}
-	}()
+	// disable logger if quiet
+	quiet := flag.Bool("quiet", false, "Disable logs")
 
 	// get port number to listen on
 	port := flag.Int("port", 0, "Port to listen on")
+
 	flag.Parse()
+
+	// set up logger
+	logger, logFile := common.CreateLogger("worker ", "color",
+		*quiet)
+	if !*quiet {
+		defer func() {
+			// clean up logfile
+			err := logFile.Close()
+			if err != nil {
+				logger.Fatal(err)
+			}
+		}()
+	}
+
 	if *port == 0 {
 		panic("No port specified")
 	}

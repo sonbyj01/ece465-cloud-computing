@@ -26,10 +26,10 @@ cat <<EOF >$CONFIG_NODES_FILE
 EOF
 
 # start clients
-target/client_latest --port 5000 &
-target/client_latest --port 5001 &
-target/client_latest --port 5002 &
-target/client_latest --port 5003 &
+target/client_latest --port 5000 --quiet &
+target/client_latest --port 5001 --quiet &
+target/client_latest --port 5002 --quiet &
+target/client_latest --port 5003 --quiet &
 
 # wait a little...
 sleep 0.25
