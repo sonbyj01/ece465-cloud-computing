@@ -104,14 +104,13 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 	for i := 0; i < len(sg.Vertices); i++ {
 		u[i] = i
 	}
-
 	r := make([]int, 0)
 
 	// loop until u is empty (see break condition)
 	for {
 		// print subgraph
 		// TODO: remove; for testing
-		logger.Printf("\n%s\n", sg.PrintSubgraph(ws.VertexBegin))
+		//logger.Printf("\n%s\n", sg.PrintSubgraph(ws.VertexBegin))
 
 		// synchronizing the beginning of each step
 		logger.Printf("Synchronizing start of round...\n")
@@ -198,5 +197,5 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 
 	// print final graph
 	// TODO: remove
-	logger.Printf("Final graph:\n%s\n", sg.PrintSubgraph(ws.VertexBegin))
+	//logger.Printf("Final graph:\n%s\n", sg.PrintSubgraph(ws.VertexBegin))
 }

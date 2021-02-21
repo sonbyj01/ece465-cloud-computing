@@ -13,7 +13,6 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
-	"time"
 )
 
 // main is the driver to be built into the executable for the client
@@ -121,8 +120,6 @@ func main() {
 				runtime.Gosched()
 
 				// retry
-				time.Sleep(1000 * time.Millisecond)
-				logger.Printf("Sleeping to try to reschedule...\n")
 				ws.ColorWgLock.Lock()
 				ws.ColorWg.Done()
 				ws.ColorWgLock.Unlock()
@@ -286,7 +283,7 @@ func main() {
 	logger.Printf("Beginning coloring...\n")
 
 	ws.State = distributed.STATE_RUNNING
-	distributed.ColorDistributed(ws, 10, runtime.NumCPU()*2, logger)
+	distributed.ColorDistributed(ws, 10000, runtime.NumCPU()*2, logger)
 	ws.State = distributed.STATE_FINISHED
 	logger.Printf("Done.")
 
