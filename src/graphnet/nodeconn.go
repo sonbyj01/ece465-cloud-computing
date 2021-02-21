@@ -123,9 +123,7 @@ type NodeConn struct {
 func (conn *NodeConn) Read() {
 	var buf []byte
 	for {
-		//conn.logger.Printf("Buffered from %s: %d\n",
-		//	conn.conn.RemoteAddr().String(), conn.reader.Buffered())
-
+		// read data header byte
 		b, err := conn.reader.ReadByte()
 		if err == io.EOF {
 			break
@@ -154,6 +152,8 @@ func (conn *NodeConn) Read() {
 		conn.dispatchTab[b](buf, conn)
 	}
 
+	conn.logger.Printf("Connection to %s closed.\n",
+		conn.conn.RemoteAddr().String())
 	conn.Close()
 }
 
@@ -214,8 +214,8 @@ func NewNodeConn(conn net.Conn, logger *log.Logger,
 
 	nodeConn := &NodeConn{
 		conn:        conn,
-		reader:      bufio.NewReaderSize(conn, 8*4096),
-		writer:      bufio.NewWriterSize(conn, 4096/8),
+		reader:      bufio.NewReader(conn),
+		writer:      bufio.NewWriter(conn),
 		logger:      logger,
 		dispatchTab: dispatchTab,
 		open:        true,

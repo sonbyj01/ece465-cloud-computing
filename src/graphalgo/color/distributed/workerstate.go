@@ -18,15 +18,32 @@ type WorkerState struct {
 	StartWg     sync.WaitGroup // WaitGroup for starting the round
 	ColorWg     sync.WaitGroup // WaitGroup for speculative coloring
 	DetectWg    sync.WaitGroup // WaitGroup for conflict detection
-	AlgoStarted bool
+	ColorWgLock sync.Mutex     // to protect the consistency of colorWg
 	ConnPool    graphnet.NodeConnPool
+	State       AlgoState
 }
 
 // NewWorkerState initializes a new WorkerState
 func NewWorkerState() *WorkerState {
 	ws := WorkerState{
 		Stored: make(map[int]int),
+		State:  STATE_INIT,
 	}
 
 	return &ws
 }
+
+// AlgoState is used to determine the current state of the algorithm (e.g.,
+// for heartbeat purposes and to have clean cleanup procedures)
+type AlgoState int
+
+const (
+	// STATE_INIT means startup and/or handshake
+	STATE_INIT AlgoState = iota
+
+	// STATE_RUNNING means algo is running
+	STATE_RUNNING AlgoState = iota
+
+	// STATE_FINISHED means algo is done
+	STATE_FINISHED AlgoState = iota
+)

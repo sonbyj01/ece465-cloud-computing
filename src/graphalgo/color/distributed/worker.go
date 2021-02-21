@@ -115,11 +115,16 @@ func ColorDistributed(ws *WorkerState, maxColor, nThreads int,
 
 		// synchronizing the beginning of each step
 		logger.Printf("Synchronizing start of round...\n")
-		ws.AlgoStarted = true
 		ws.ConnPool.BroadcastWorkers(graphnet.MSG_NODE_ROUND_START,
 			[]byte{byte(ws.NodeIndex)})
 		ws.StartWg.Wait()
 		ws.StartWg.Add(ws.NodeCount - 2)
+
+		// special care taken here due to potential race condition; see
+		// documentation
+		ws.ColorWgLock.Lock()
+		ws.ColorWg.Add(ws.NodeCount - 2)
+		ws.ColorWgLock.Unlock()
 
 		logger.Printf("Beginning new round: %d vertices to be colored\n",
 			len(u))
