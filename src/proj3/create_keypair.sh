@@ -8,8 +8,8 @@
 source ./config.sh
 
 NOW=$(date '+%Y%m%d%H%M%S')
-LOGFILE="../../logs/create_keypair-${NOW}.log"
-#echo "Removing Full AWS infrastructure for " | tee ${LOGFILE}
+LOGFILE="${LOGDIR}/create_keypair-${NOW}.log"
+echo "Removing Full AWS infrastructure for ${APP_TAG_NAME}:${APP_TAG_VALUE}" | tee ${LOGFILE}
 
 echo "Running create_keypair.sh at ${NOW}" | tee -a ${LOGFILE}
 
