@@ -1,5 +1,7 @@
 #!/bin/bash
 
+LOGDIR=`realpath ../../logs`
+
 PROFILE=default
 REGION=us-east-1
 PREAMBLE="--profile ${PROFILE} --region ${REGION}"
