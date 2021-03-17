@@ -9,9 +9,9 @@ Prof. Marano
 
 We chose to focus on the graph coloring problem.
 
-- [Project 1](./src/proj1/README.md): Graph coloring in a single-node,
+- [Project 1](src/proj1/README.md): Graph coloring in a single-node,
   multithreaded environment
-- [Project 2](./src/proj2/README.md): Graph coloring in a multi-node,
+- [Project 2](src/proj2/README.md): Graph coloring in a multi-node,
   multithreaded environment 
 
 ---
