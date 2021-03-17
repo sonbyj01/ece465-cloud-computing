@@ -1,0 +1,17 @@
+# binaries
+target/
+
+# other go binaries (e.g., godoc)
+bin/
+
+# ViM swapfiles
+**/.*.swp
+
+# JetBrains Goland files
+.idea
+
+# go built packages
+pkg
+
+# logfiles
+logs/*.log
